@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="stop_line_detector_settings" default="$(find stop_line_detector)/config/param/stop_line_detector.yaml"/>
+    <arg name="rviz_settings" default="$(find stop_line_detector)/config/rviz/stop_line_detector.rviz"/>
+    <node pkg="stop_line_detector" type="stop_line_detector.py" name="stop_line_detector" output="screen">
+        <rosparam command="load" file="$(arg stop_line_detector_settings)"/>
+    </node>
+
+    <!-- play rosbag -->
+    <param name="use_sim_time" value="true"/>
+    <arg name="bagfile" default="/home/amsl/bagfiles/2022-11-04-18-53-56.bag"/>
+    <arg name="start" default="0.0"/>
+    <arg name="duration" default="100.0"/>
+    <arg name="delay" default="30.0"/>
+    <arg name="play_speed_ratio" default="1.0"/>
+    <node pkg="rosbag" type="play" name="rosbag_play" output="screen" args="
+        $(arg bagfile)
+        -l
+        -q
+        -r $(arg play_speed_ratio)
+        -s $(arg start)
+        --clock
+        ">
+    </node>
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
+</launch>

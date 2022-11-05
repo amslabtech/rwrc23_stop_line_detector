@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="stop_line_detector_settings" default="$(find stop_line_detector)/config/param/stop_line_detector.yaml"/>
+    <node pkg="stop_line_detector" type="stop_line_detector.py" name="stop_line_detector" output="screen">
+        <rosparam command="load" file="$(arg stop_line_detector_settings)"/>
+    </node>
+</launch>

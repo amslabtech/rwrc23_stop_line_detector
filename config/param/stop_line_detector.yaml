@@ -1,0 +1,12 @@
+hz: 15
+trans_upper_left: 0.333
+trans_upper_right: 0.666
+line_grad_th: 0.666
+line_length_th: 10
+close_line_th: 7
+cand_hsv_lo: [0,0,200]
+cand_hsv_hi: [180,70,255]
+rect_w_lo: 150
+rect_h_lo: 30
+rect_h_hi: 60
+whiteness_th: 3.0
