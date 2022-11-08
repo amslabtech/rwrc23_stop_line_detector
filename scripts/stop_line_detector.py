@@ -2,6 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import Bool
 
 import cv2
 import itertools
@@ -21,11 +22,13 @@ class StopLineDetector:
     _rect_w_lo: int
     _rect_h_lo: int
     _rect_h_hi: int
-    _whiteness_th: float
+    _whiteness_th_lo: float
+    _whiteness_th_hi: float
     _pub: rospy.Publisher
     _sub: rospy.Subscriber
     _input_image: np.ndarray
     _compressed_image: CompressedImage
+    _visualize: bool
 
     def __init__(self):
         rospy.init_node("stop_line_detector", anonymous=True)
@@ -38,15 +41,18 @@ class StopLineDetector:
         self._close_line_th = rospy.get_param("~close_line_th", 7)
         self._cand_hsv_lo = [int(n) for n in rospy.get_param("~cand_hsv_lo", [0,0,0])]
         self._cand_hsv_hi = [int(n) for n in rospy.get_param("~cand_hsv_hi", [180,255,255])]
-
         self._rect_w_lo = rospy.get_param("~rect_w_lo", 150)
         self._rect_h_lo = rospy.get_param("~rect_h_lo", 30)
         self._rect_h_hi = rospy.get_param("~rect_h_hi", 60)
-        self._whiteness_th = rospy.get_param("~whiteness_th", 3.0)
+        self._whiteness_th_lo = rospy.get_param("~whiteness_th_lo", 5.0)
+        self._whiteness_th_hi = rospy.get_param("~whiteness_th_hi", 10.0)
+        self._visualize = rospy.get_param("~visualize", False)
 
-        self._pub = rospy.Publisher("/stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
-        # self._sub = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        self._pub_image = rospy.Publisher("/stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
+        self._pub_stop_line_flag = rospy.Publisher("/stop_line_flag", Bool, queue_size=1, tcp_nodelay=True)
         self._sub = rospy.Subscriber("/realsense/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        # self._sub = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        self._input_image = np.empty(0)
         self._input_image = np.empty(0)
         self._compressed_image = CompressedImage()
         self._compressed_image.format = "jpeg"
@@ -57,13 +63,17 @@ class StopLineDetector:
         self._run()
 
     def _run(self):
+        self._stop_line_flag = False
         trans_img = self._image_trans(self._input_image)
         lines = self._detect_lines(trans_img)
         connected_lines = self._connect_close_lines(lines)
         result_img = self._detect_whiteline(trans_img, connected_lines)
 
-        self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
-        self._pub.publish(self._compressed_image)
+        if self._visualize:
+            self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
+            self._pub_image.publish(self._compressed_image)
+
+        self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
         p1 = np.array([math.floor(img.shape[1] * self._trans_upper_left), 0])  # param
@@ -88,8 +98,7 @@ class StopLineDetector:
             math.hypot(src[0] - dst[0], src[1] - dst[1]),
             math.hypot(src[0] - dst[2], src[1] - dst[3]),
             math.hypot(src[2] - dst[0], src[3] - dst[1]),
-            math.hypot(src[2] - dst[2], src[3] - dst[3]),
-        )
+            math.hypot(src[2] - dst[2], src[3] - dst[3]),)
 
         return min(dists)
 
@@ -123,8 +132,8 @@ class StopLineDetector:
         prep_img = cv2.GaussianBlur(cl_img, (3,3), 0)
 
         ##detect
-        detector = cv2.createLineSegmentDetector()
-        lines, _, _, _ = detector.detect(prep_img)
+        detector = cv2.ximgproc.createFastLineDetector()
+        lines = detector.detect(prep_img)
         lines = lines.tolist()
 
         ##visualize
@@ -217,18 +226,19 @@ class StopLineDetector:
 
         ##result
         result_img = img.copy()
-        whiteness_max = 0.0
         for img, area, br in zip(candidate_imgs, candidate_areas, mean_brightnesses):
             whiteness = br / mean_all_brightness
-            # print(whiteness)
-            if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and whiteness > self._whiteness_th:  # param
-                result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), (0, 255, 0), 2)
+            if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and self._whiteness_th_lo < whiteness <self._whiteness_th_hi:  # param
+                if self._visualize:
+                    print(whiteness)
+                    result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), (0, 255, 0), 2)
+                self._stop_line_flag = True
 
         return result_img
 
     def __call__(self):
-        # duration = int(1.0 / self._hz * 1e6)
-        # rospy.Timer(rospy.Duration(nsecs=duration), self._compressed_image_callback)
+        duration = int(1.0 / self._hz * 1e6)
+        rospy.Timer(rospy.Duration(nsecs=duration), self._compressed_image_callback)
         rospy.spin()
 
 
