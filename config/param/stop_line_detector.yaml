@@ -1,6 +1,6 @@
 hz: 15
-trans_upper_left: 0.333
-trans_upper_right: 0.666
+eye_level: 45
+trans_target_level: 280
 line_grad_th: 0.666
 line_length_th: 10
 close_line_th: 7
@@ -9,6 +9,6 @@ cand_hsv_hi: [30,5,255] #[180,70,255]
 rect_w_lo: 170 #150
 rect_h_lo: 25  #10
 rect_h_hi: 40  #30
-whiteness_th_lo: 7.0
+whiteness_th_lo: 2.0
 whiteness_th_hi: 100.0
 visualize: True

@@ -34,8 +34,8 @@ class StopLineDetector:
         rospy.init_node("stop_line_detector", anonymous=True)
 
         self._hz = rospy.get_param("~hz", 15.0)
-        self._trans_upper_left = rospy.get_param("~trans_upper_left", 1/3)
-        self._trans_upper_right = rospy.get_param("~trans_upper_right", 2/3)
+        self._eye_level = rospy.get_param("~eye_level", 45)
+        self._trans_target_level = rospy.get_param("~trans_target_level", 280)
         self._line_grad_th = rospy.get_param("~line_grad_th", 2/3)
         self._line_length_th = rospy.get_param("~line_length_th", 10)
         self._close_line_th = rospy.get_param("~close_line_th", 7)
@@ -76,8 +76,11 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        p1 = np.array([math.floor(img.shape[1] * self._trans_upper_left), 0])  # param
-        p2 = np.array([math.floor(img.shape[1] * self._trans_upper_right), 0])  # param
+        bottom_to_vp = img.shape[0] - self._eye_level
+        targetlevel_to_vp = self._trans_target_level - self._eye_level
+        target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
+        p1 = np.array([(img.shape[1]-target_width)//2, 0])  # param
+        p2 = np.array([(img.shape[1]+target_width)//2, 0])  # param
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
@@ -206,9 +209,9 @@ class StopLineDetector:
                 if candidate_img.shape[0] < 1 or candidate_img.shape[1] < 1:
                     continue
 
-                candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)
-                candidate_img = cv2.inRange(candidate_img, tuple(self._cand_hsv_lo), tuple(self._cand_hsv_hi))  # param
-                # candidate_img = cv2.inRange(candidate_img, (150, 150, 150), (255, 255, 255))  # RGB
+                # candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)
+                # candidate_img = cv2.inRange(candidate_img, tuple(self._cand_hsv_lo), tuple(self._cand_hsv_hi))  # param
+                candidate_img = cv2.inRange(candidate_img, (90, 130, 160), (255, 255, 255))  # RGB
                 candidate_imgs.append(candidate_img)
                 candidate_areas.append(candidate_area)
                 mean_brightness = candidate_img.mean()
@@ -230,7 +233,7 @@ class StopLineDetector:
             whiteness = br / mean_all_brightness
             if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and self._whiteness_th_lo < whiteness <self._whiteness_th_hi:  # param
                 if self._visualize:
-                    print(whiteness)
+                    print(f"white_line: {whiteness}")
                     result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), (0, 255, 0), 2)
                 self._stop_line_flag = True
 
