@@ -22,8 +22,8 @@ class StopLineDetector:
     _rect_w_lo: int
     _rect_h_lo: int
     _rect_h_hi: int
-    _whiteness_th_lo: float
-    _whiteness_th_hi: float
+    _whiteness_th: float
+    _luminance_th: float
     _pub: rospy.Publisher
     _sub: rospy.Subscriber
     _input_image: np.ndarray
@@ -39,13 +39,13 @@ class StopLineDetector:
         self._line_grad_th = rospy.get_param("~line_grad_th", 2/3)
         self._line_length_th = rospy.get_param("~line_length_th", 10)
         self._close_line_th = rospy.get_param("~close_line_th", 7)
-        self._cand_hsv_lo = [int(n) for n in rospy.get_param("~cand_hsv_lo", [0,0,0])]
-        self._cand_hsv_hi = [int(n) for n in rospy.get_param("~cand_hsv_hi", [180,255,255])]
+        self._rgb_lo = [int(n) for n in rospy.get_param("~rgb_lo", [0,0,0])]
+        self._rgb_hi = [int(n) for n in rospy.get_param("~rgb_hi", [255,255,255])]
         self._rect_w_lo = rospy.get_param("~rect_w_lo", 150)
         self._rect_h_lo = rospy.get_param("~rect_h_lo", 30)
         self._rect_h_hi = rospy.get_param("~rect_h_hi", 60)
-        self._whiteness_th_lo = rospy.get_param("~whiteness_th_lo", 5.0)
-        self._whiteness_th_hi = rospy.get_param("~whiteness_th_hi", 10.0)
+        self._whiteness_th = rospy.get_param("~whiteness_th", 5.0)
+        self._luminance_th = rospy.get_param("~luminance_th", 50)
         self._visualize = rospy.get_param("~visualize", False)
 
         self._pub_image = rospy.Publisher("/stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
@@ -76,11 +76,13 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        bottom_to_vp = img.shape[0] - self._eye_level
-        targetlevel_to_vp = self._trans_target_level - self._eye_level
-        target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-        p1 = np.array([(img.shape[1]-target_width)//2, 0])  # param
-        p2 = np.array([(img.shape[1]+target_width)//2, 0])  # param
+        # bottom_to_vp = img.shape[0] - self._eye_level
+        # targetlevel_to_vp = self._trans_target_level - self._eye_level
+        # target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
+        # p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
+        # p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
+        p1 = np.array([271,50])  # tsukuba
+        p2 = np.array([452,47])  # tsukuba
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
@@ -193,6 +195,7 @@ class StopLineDetector:
         ##handpick
         candidate_imgs = []
         candidate_areas = []
+        luminance_stds = []
         mean_brightnesses = []
 
         for i, line_a in enumerate(lines):
@@ -211,12 +214,14 @@ class StopLineDetector:
 
                 # candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)
                 # candidate_img = cv2.inRange(candidate_img, tuple(self._cand_hsv_lo), tuple(self._cand_hsv_hi))  # param
-                candidate_img = cv2.inRange(candidate_img, (90, 130, 160), (255, 255, 255))  # RGB
+                gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
+                gray_img = np.array(gray_img).flatten()
+                luminance_stds.append(np.std(gray_img))
+                candidate_img = cv2.inRange(candidate_img, tuple(self._rgb_lo), tuple(self._rgb_hi))  # RGB
                 candidate_imgs.append(candidate_img)
                 candidate_areas.append(candidate_area)
                 mean_brightness = candidate_img.mean()
                 mean_brightnesses.append(mean_brightness)
-
         mean_all_brightness = np.array(mean_brightnesses).mean() + 1e-6
 
         ##debug
@@ -229,11 +234,12 @@ class StopLineDetector:
 
         ##result
         result_img = img.copy()
-        for img, area, br in zip(candidate_imgs, candidate_areas, mean_brightnesses):
+        for img, area, br, lum in zip(candidate_imgs, candidate_areas, mean_brightnesses, luminance_stds):
             whiteness = br / mean_all_brightness
-            if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and self._whiteness_th_lo < whiteness <self._whiteness_th_hi:  # param
+            if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and self._whiteness_th < whiteness and self._luminance_th < lum:  # param
                 if self._visualize:
-                    print(f"white_line: {whiteness}")
+                    print(f"whiteness: {whiteness}")
+                    print(f"luminance: {lum}")
                     result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), (0, 255, 0), 2)
                 self._stop_line_flag = True
 
