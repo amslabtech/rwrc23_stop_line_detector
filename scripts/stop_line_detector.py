@@ -9,6 +9,7 @@ import itertools
 import math
 import numpy as np
 import random
+from pylsd.lsd import lsd
 
 class StopLineDetector:
     _hz: float
@@ -79,10 +80,10 @@ class StopLineDetector:
         bottom_to_vp = img.shape[0] - self._eye_level
         targetlevel_to_vp = self._trans_target_level - self._eye_level
         target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-        p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
-        p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
-        # p1 = np.array([271,50])  # tsukuba
-        # p2 = np.array([452,47])  # tsukuba
+        # p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
+        # p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
+        p1 = np.array([271,50])  # tsukuba
+        p2 = np.array([452,47])  # tsukuba
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
@@ -96,7 +97,8 @@ class StopLineDetector:
         return trans_img
 
     def _get_line_coordinate(self, line):
-        return int(line[0][0]), int(line[0][1]), int(line[0][2]), int(line[0][3])
+        # return int(line[0][0]), int(line[0][1]), int(line[0][2]), int(line[0][3])
+        return int(line[0]), int(line[1]), int(line[2]), int(line[3]) #Pylsd
 
     def _calc_endpoints_distance(self, src, dst):
         dists = (
@@ -137,8 +139,9 @@ class StopLineDetector:
         prep_img = cv2.GaussianBlur(cl_img, (3,3), 0)
 
         ##detect
-        detector = cv2.ximgproc.createFastLineDetector()
-        lines = detector.detect(prep_img)
+        # detector = cv2.ximgproc.createFastLineDetector()
+        # lines = detector.detect(prep_img)
+        lines = lsd(prep_img) #Pylsd
         lines = lines.tolist() if lines is not None else []
 
         ##visualize

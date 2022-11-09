@@ -9,6 +9,6 @@ rgb_hi: [255,255,255]
 rect_w_lo: 170
 rect_h_lo: 25
 rect_h_hi: 40
-whiteness_th: 1.0 #1.0 in tkb
-luminance_th: 20 #50 in tkb
+whiteness_th: 1.0 #in tkb
+luminance_th: 50 #in tkb
 visualize: True
