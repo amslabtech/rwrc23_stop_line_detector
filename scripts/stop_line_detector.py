@@ -76,13 +76,13 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        # bottom_to_vp = img.shape[0] - self._eye_level
-        # targetlevel_to_vp = self._trans_target_level - self._eye_level
-        # target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-        # p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
-        # p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
-        p1 = np.array([271,50])  # tsukuba
-        p2 = np.array([452,47])  # tsukuba
+        bottom_to_vp = img.shape[0] - self._eye_level
+        targetlevel_to_vp = self._trans_target_level - self._eye_level
+        target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
+        p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
+        p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
+        # p1 = np.array([271,50])  # tsukuba
+        # p2 = np.array([452,47])  # tsukuba
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
@@ -139,7 +139,7 @@ class StopLineDetector:
         ##detect
         detector = cv2.ximgproc.createFastLineDetector()
         lines = detector.detect(prep_img)
-        lines = lines.tolist()
+        lines = lines.tolist() if lines is not None else []
 
         ##visualize
         # detected_img = trans_img.copy()
@@ -236,6 +236,8 @@ class StopLineDetector:
         result_img = img.copy()
         for img, area, br, lum in zip(candidate_imgs, candidate_areas, mean_brightnesses, luminance_stds):
             whiteness = br / mean_all_brightness
+            # print(f"whiteness: {whiteness}")
+            # print(f"luminance: {lum}")
             if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and self._whiteness_th < whiteness and self._luminance_th < lum:  # param
                 if self._visualize:
                     print(f"whiteness: {whiteness}")
@@ -246,7 +248,7 @@ class StopLineDetector:
         return result_img
 
     def __call__(self):
-        duration = int(1.0 / self._hz * 1e6)
+        duration = int(1.0 / self._hz * 1e9)
         rospy.Timer(rospy.Duration(nsecs=duration), self._compressed_image_callback)
         rospy.spin()
 
