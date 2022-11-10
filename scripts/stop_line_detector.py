@@ -13,8 +13,9 @@ from pylsd.lsd import lsd
 
 class StopLineDetector:
     _hz: float
-    _trans_upper_left: float
-    _trans_upper_right: float
+    _eye_level: int
+    _trans_target_level: int
+    _stop_level: int
     _line_grad_th: float
     _line_length_th: int
     _close_line_th: int
@@ -25,8 +26,10 @@ class StopLineDetector:
     _rect_h_hi: int
     _whiteness_th: float
     _luminance_th: float
-    _pub: rospy.Publisher
+    _pub_image: rospy.Publisher
+    _pub_stop_line_flag: rospy.Publisher
     _sub: rospy.Subscriber
+    _stop_area: int
     _input_image: np.ndarray
     _compressed_image: CompressedImage
     _visualize: bool
@@ -37,6 +40,7 @@ class StopLineDetector:
         self._hz = rospy.get_param("~hz", 15.0)
         self._eye_level = rospy.get_param("~eye_level", 45)
         self._trans_target_level = rospy.get_param("~trans_target_level", 280)
+        self._stop_level = rospy.get_param("~stop_level", 0)
         self._line_grad_th = rospy.get_param("~line_grad_th", 2/3)
         self._line_length_th = rospy.get_param("~line_length_th", 10)
         self._close_line_th = rospy.get_param("~close_line_th", 7)
@@ -53,6 +57,7 @@ class StopLineDetector:
         self._pub_stop_line_flag = rospy.Publisher("/stop_line_flag", Bool, queue_size=1, tcp_nodelay=True)
         self._sub = rospy.Subscriber("/realsense/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
         # self._sub = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        self._stop_area = 0
         self._input_image = np.empty(0)
         self._input_image = np.empty(0)
         self._compressed_image = CompressedImage()
@@ -80,10 +85,10 @@ class StopLineDetector:
         bottom_to_vp = img.shape[0] - self._eye_level
         targetlevel_to_vp = self._trans_target_level - self._eye_level
         target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-        # p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
-        # p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
-        p1 = np.array([271,50])  # tsukuba
-        p2 = np.array([452,47])  # tsukuba
+        p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
+        p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
+        # p1 = np.array([271,50])  # tsukuba
+        # p2 = np.array([452,47])  # tsukuba
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
@@ -94,6 +99,7 @@ class StopLineDetector:
         trans_mat = cv2.getPerspectiveTransform(trans_src, trans_dst)
         trans_img = cv2.warpPerspective(img, trans_mat, (dst_width, dst_height))
 
+        self._stop_area = math.floor(dst_height * (self._stop_level - self._trans_target_level) / ((img.shape[0]-1) - self._trans_target_level))
         return trans_img
 
     def _get_line_coordinate(self, line):
@@ -242,11 +248,16 @@ class StopLineDetector:
             # print(f"whiteness: {whiteness}")
             # print(f"luminance: {lum}")
             if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and self._whiteness_th < whiteness and self._luminance_th < lum:  # param
+                if max(area[2], area[3]) > self._stop_area:
+                    self._stop_line_flag = True
+
                 if self._visualize:
-                    print(f"whiteness: {whiteness}")
-                    print(f"luminance: {lum}")
-                    result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), (0, 255, 0), 2)
-                self._stop_line_flag = True
+                    # print(f"whiteness: {whiteness}")
+                    # print(f"luminance: {lum}")
+                    bgr = (0,255,0)
+                    if max(area[2], area[3]) > self._stop_area:
+                        bgr = (0,0,255)
+                    result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), bgr, 2)
 
         return result_img
 
