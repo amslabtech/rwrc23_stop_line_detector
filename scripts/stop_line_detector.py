@@ -66,9 +66,12 @@ class StopLineDetector:
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR)
         self._compressed_image.header = data.header
-        self._run()
+        # self._run()
 
-    def _run(self):
+    def _run(self, _) -> None:
+        if self._input_image.size == 0:
+            return
+
         self._stop_line_flag = False
         trans_img = self._image_trans(self._input_image)
         lines = self._detect_lines(trans_img)
@@ -217,20 +220,21 @@ class StopLineDetector:
                     max(line_a[0], line_a[2], line_b[0], line_b[2]),
                     min(line_a[1], line_a[3], line_b[1], line_b[3]),
                     max(line_a[1], line_a[3], line_b[1], line_b[3]))
-                candidate_img = img.copy()[candidate_area[2]:candidate_area[3], candidate_area[0]:candidate_area[1]]
-                if candidate_img.shape[0] < 1 or candidate_img.shape[1] < 1:
-                    continue
+                candidate_h = abs(candidate_area[2] - candidate_area[3])
+                candidate_w = abs(candidate_area[0] - candidate_area[1])
 
-                # candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)
-                # candidate_img = cv2.inRange(candidate_img, tuple(self._cand_hsv_lo), tuple(self._cand_hsv_hi))  # param
-                gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
-                gray_img = np.array(gray_img).flatten()
-                luminance_stds.append(np.std(gray_img))
-                candidate_img = cv2.inRange(candidate_img, tuple(self._rgb_lo), tuple(self._rgb_hi))  # RGB
-                candidate_imgs.append(candidate_img)
-                candidate_areas.append(candidate_area)
-                mean_brightness = candidate_img.mean()
-                mean_brightnesses.append(mean_brightness)
+                if self._rect_h_lo < candidate_h < self._rect_h_hi and self._rect_w_lo < candidate_w:
+                    candidate_img = img.copy()[candidate_area[2]:candidate_area[3], candidate_area[0]:candidate_area[1]]
+                    # candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)
+                    # candidate_img = cv2.inRange(candidate_img, tuple(self._cand_hsv_lo), tuple(self._cand_hsv_hi))  # param
+                    gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
+                    gray_img = np.array(gray_img).flatten()
+                    luminance_stds.append(np.std(gray_img))
+                    candidate_img = cv2.inRange(candidate_img, tuple(self._rgb_lo), tuple(self._rgb_hi))  # RGB
+                    candidate_imgs.append(candidate_img)
+                    candidate_areas.append(candidate_area)
+                    mean_brightness = candidate_img.mean()
+                    mean_brightnesses.append(mean_brightness)
         mean_all_brightness = np.array(mean_brightnesses).mean() + 1e-6
 
         ##debug
@@ -247,7 +251,7 @@ class StopLineDetector:
             whiteness = br / mean_all_brightness
             # print(f"whiteness: {whiteness}")
             # print(f"luminance: {lum}")
-            if self._rect_h_lo < img.shape[0] < self._rect_h_hi and self._rect_w_lo < img.shape[1] and self._whiteness_th < whiteness and self._luminance_th < lum:  # param
+            if self._whiteness_th < whiteness and self._luminance_th < lum:  # param
                 if max(area[2], area[3]) > self._stop_area:
                     self._stop_line_flag = True
 
@@ -263,7 +267,7 @@ class StopLineDetector:
 
     def __call__(self):
         duration = int(1.0 / self._hz * 1e9)
-        rospy.Timer(rospy.Duration(nsecs=duration), self._compressed_image_callback)
+        rospy.Timer(rospy.Duration(nsecs=duration), self._run)
         rospy.spin()
 
 

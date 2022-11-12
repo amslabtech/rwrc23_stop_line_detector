@@ -12,9 +12,10 @@
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki_with_realsense_2022-11-06-10-53-25.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki1_with_realsense_2022-11-06-11-01-34.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/kaeri_with_realsense_2022-11-06-10-56-36.bag"/> -->
-    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stopline_tst.bag"/>
+    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stopline_tst.bag"/> -->
+    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stop_line_bag_11_11.bag"/>
 
-    <arg name="start" default="30"/>
+    <arg name="start" default="0"/>
     <arg name="duration" default="0.0"/>
     <arg name="delay" default="30.0"/>
     <arg name="play_speed_ratio" default="1.0"/>
