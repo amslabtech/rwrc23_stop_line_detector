@@ -84,13 +84,13 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        # bottom_to_vp = img.shape[0] - self._eye_level
-        # targetlevel_to_vp = self._trans_target_level - self._eye_level
-        # target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-        # p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
-        # p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
-        p1 = np.array([271,50])  # tsukuba
-        p2 = np.array([452,47])  # tsukuba
+        bottom_to_vp = img.shape[0] - self._eye_level
+        targetlevel_to_vp = self._trans_target_level - self._eye_level
+        target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
+        p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
+        p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
+        # p1 = np.array([271,50])  # tsukuba
+        # p2 = np.array([452,47])  # tsukuba
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
