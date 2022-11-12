@@ -59,7 +59,6 @@ class StopLineDetector:
         # self._sub = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
         self._stop_area = 0
         self._input_image = np.empty(0)
-        self._input_image = np.empty(0)
         self._compressed_image = CompressedImage()
         self._compressed_image.format = "jpeg"
 
@@ -69,7 +68,7 @@ class StopLineDetector:
         # self._run()
 
     def _run(self, _) -> None:
-        if self._input_image.size == 0:
+        if self._input_image.shape[0] == 0:
             return
 
         self._stop_line_flag = False
@@ -85,13 +84,13 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        bottom_to_vp = img.shape[0] - self._eye_level
-        targetlevel_to_vp = self._trans_target_level - self._eye_level
-        target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-        p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
-        p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
-        # p1 = np.array([271,50])  # tsukuba
-        # p2 = np.array([452,47])  # tsukuba
+        # bottom_to_vp = img.shape[0] - self._eye_level
+        # targetlevel_to_vp = self._trans_target_level - self._eye_level
+        # target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
+        # p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
+        # p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
+        p1 = np.array([271,50])  # tsukuba
+        p2 = np.array([452,47])  # tsukuba
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
@@ -215,16 +214,19 @@ class StopLineDetector:
                 if j <= i:
                     continue
 
+
                 candidate_area = (
-                    min(line_a[0], line_a[2], line_b[0], line_b[2]),
-                    max(line_a[0], line_a[2], line_b[0], line_b[2]),
-                    min(line_a[1], line_a[3], line_b[1], line_b[3]),
-                    max(line_a[1], line_a[3], line_b[1], line_b[3]))
+                    max(min(line_a[0], line_a[2], line_b[0], line_b[2]), 0),
+                    min(max(line_a[0], line_a[2], line_b[0], line_b[2]), img.shape[1]-1),
+                    max(min(line_a[1], line_a[3], line_b[1], line_b[3]), 0),
+                    min(max(line_a[1], line_a[3], line_b[1], line_b[3]), img.shape[0]-1)
+                    )
                 candidate_h = abs(candidate_area[2] - candidate_area[3])
                 candidate_w = abs(candidate_area[0] - candidate_area[1])
 
-                if self._rect_h_lo < candidate_h < self._rect_h_hi and self._rect_w_lo < candidate_w:
+                if self._rect_h_lo <= candidate_h <= self._rect_h_hi and self._rect_w_lo <= candidate_w:
                     candidate_img = img.copy()[candidate_area[2]:candidate_area[3], candidate_area[0]:candidate_area[1]]
+                    # cv2.imshow('img', candidate_img)
                     # candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)
                     # candidate_img = cv2.inRange(candidate_img, tuple(self._cand_hsv_lo), tuple(self._cand_hsv_hi))  # param
                     gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)

@@ -1,4 +1,4 @@
-hz: 15 #hz
+hz: 10 #hz
 eye_level: 40 #cell(v)
 trans_target_level: 188 #cell(v)
 stop_level: 450 #cell(v)
@@ -10,6 +10,6 @@ rgb_hi: [255,255,255]
 rect_w_lo: 170 #cell(u)
 rect_h_lo: 25 #cell(v)
 rect_h_hi: 40 #cell(v)
-whiteness_th: 0.8 #1.0 in tkb
-luminance_th: 20  #50 in tkb
+whiteness_th: 1.0 #0.8 in ikt
+luminance_th: 50  #20 in ikt
 visualize: True
