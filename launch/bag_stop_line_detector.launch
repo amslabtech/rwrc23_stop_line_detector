@@ -15,8 +15,16 @@
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stopline_tst.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stop_line_bag_11_11.bag"/> -->
 
-    <arg name="start" default="0"/>
-    <arg name="duration" default="0.0"/>
+ <!-- extract images from a movie -->
+    <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
+    <!--     args="compressed in:=/stop_line_image raw out:=/stop_line_image" /> -->
+    <!-- <node name="extract" pkg="image_view" type="extract_images" respawn="false" output="screen" cwd="ROS_HOME"> -->
+    <!--     <remap from="image" to="/stop_line_image"/> -->
+    <!-- </node> -->
+
+
+    <arg name="start" default="110"/>
+    <arg name="duration" default="200"/>
     <arg name="delay" default="30.0"/>
     <arg name="play_speed_ratio" default="1.0"/>
     <node pkg="rosbag" type="play" name="rosbag_play" output="screen" args="

@@ -5,11 +5,13 @@ stop_level: 450 #cell(v)
 line_grad_th: 0.666 #y/x
 line_length_th: 10 #cell(u)
 close_line_th: 7 #cell
-rgb_lo: [90,90,90]
-rgb_hi: [255,255,255]
+hsv_lo: [50,0,150]
+hsv_hi: [105,50,255]
 rect_w_lo: 170 #cell(u)
 rect_h_lo: 25 #cell(v)
 rect_h_hi: 40 #cell(v)
+split_num: 10
+resize_num: 30
 whiteness_th: 1.0 #0.8 in ikt
-luminance_th: 50  #20 in ikt
+smoothness_th: 0.2  #20 in ikti
 visualize: True
