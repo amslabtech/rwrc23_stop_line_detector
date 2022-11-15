@@ -99,7 +99,7 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        if(self._tsukubag):
+        if self._tsukubag:
             p1 = np.array([271,50])  # tsukuba
             p2 = np.array([452,47])  # tsukuba
         else:
