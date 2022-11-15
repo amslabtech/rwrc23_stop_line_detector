@@ -163,31 +163,16 @@ class StopLineDetector:
         cl_img = clahe.apply(gray_img)
         prep_img = cv2.GaussianBlur(cl_img, (3,3), 0)
 
-        ##detect
-        # detector = cv2.ximgproc.createFastLineDetector()
-        # lines = detector.detect(prep_img)
         lines = lsd(prep_img) #Pylsd
         lines = lines.tolist() if lines is not None else []
-
-        ##visualize
-        # detected_img = trans_img.copy()
-        #
-        # for line in lines:
-        #     x1, y1, x2, y2 = get_line_coordinate(line)
-        #     color = [random.randint(0, 255) for _ in range(3)]
-        #     detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 2)
-
         ##filter
         filtered_lines = []
-
         for line in lines:
             x1, y1, x2, y2 = self._get_line_coordinate(line)
             line_grad = (y2 - y1) / (x2 - x1 + 1e-10)
             line_length = math.hypot(x2 - x1, y2 - y1)
             if abs(line_grad) < self._line_grad_th and line_length > self._line_length_th:  # param
                 filtered_lines.append((x1, y1, x2, y2))
-                # color = [random.randint(0, 255) for _ in range(3)]
-                # detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 2)
 
         return filtered_lines
 
@@ -211,11 +196,6 @@ class StopLineDetector:
                     connected_lines.append(self._connect_lines(lines))
                     lines = None
                     break
-
-        # connected_img = trans_img.copy()
-        # for x1, y1, x2, y2 in connected_lines:
-        #     color = [random.randint(0, 255) for _ in range(3)]
-        #     connected_img = cv2.line(connected_img, (x1, y1), (x2, y2), color, 2)
 
         return connected_lines
 
@@ -286,14 +266,6 @@ class StopLineDetector:
                     mean_brightnesses.append(mean_brightness)
         mean_all_brightness = np.array(mean_brightnesses).mean() + 1e-6
 
-        ##debug
-        # for br in (mean_brightnesses):
-        #     print(f"mean_all_brightness: {mean_all_brightness} \n")
-        #     print(f"brightness: {br} , whiteness: {br/mean_all_brightness}\n\n")
-        #     cv2.imshow('cand_img', img)
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
-
         ##result
         result_img = img.copy()
         for img, area, br, tex in zip(candidate_imgs, candidate_areas, mean_brightnesses, textures):
@@ -326,9 +298,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    ##output
-    # print(f"\nwhiteness_max : {whiteness_max}\n")
-    # cv2.imshow('result', result_img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
