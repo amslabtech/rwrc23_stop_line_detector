@@ -36,6 +36,7 @@ class StopLineDetector:
     _stop_area: int
     _input_image: np.ndarray
     _compressed_image: CompressedImage
+    _tsukubag: bool
     _visualize: bool
 
     def __init__(self):
@@ -57,6 +58,7 @@ class StopLineDetector:
         self._resize_num = rospy.get_param("~resize_num", 30)
         self._whiteness_th = rospy.get_param("~whiteness_th", 0.5)
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
+        self._tsukubag = rospy.get_param("~tsukubag", False)
         self._visualize = rospy.get_param("~visualize", False)
 
         self._pub_image = rospy.Publisher("/stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
@@ -97,13 +99,15 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        # bottom_to_vp = img.shape[0] - self._eye_level
-        # targetlevel_to_vp = self._trans_target_level - self._eye_level
-        # target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-        # p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
-        # p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
-        p1 = np.array([271,50])  # tsukuba
-        p2 = np.array([452,47])  # tsukuba
+        if(self._tsukubag):
+            p1 = np.array([271,50])  # tsukuba
+            p2 = np.array([452,47])  # tsukuba
+        else:
+            bottom_to_vp = img.shape[0] - self._eye_level
+            targetlevel_to_vp = self._trans_target_level - self._eye_level
+            target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
+            p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
+            p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)

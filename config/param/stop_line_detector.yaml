@@ -14,4 +14,5 @@ split_num: 10
 resize_num: 30
 whiteness_th: 1.0 #0.8 in ikt
 smoothness_th: 0.2  #20 in ikti
+tsukubag: False
 visualize: True
