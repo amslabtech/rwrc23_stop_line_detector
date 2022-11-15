@@ -23,7 +23,7 @@
     <!-- </node> -->
 
 
-    <arg name="start" default="110"/>
+    <arg name="start" default="80"/>
     <arg name="duration" default="200"/>
     <arg name="delay" default="30.0"/>
     <arg name="play_speed_ratio" default="1.0"/>

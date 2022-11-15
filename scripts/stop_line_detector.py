@@ -30,7 +30,9 @@ class StopLineDetector:
     _smoothness_th: float
     _pub_image: rospy.Publisher
     _pub_stop_line_flag: rospy.Publisher
-    _sub: rospy.Subscriber
+    _sub_flag: rospy.Subscriber
+    _sub_img: rospy.Subscriber
+    _detect_flag: bool
     _stop_area: int
     _input_image: np.ndarray
     _compressed_image: CompressedImage
@@ -59,12 +61,17 @@ class StopLineDetector:
 
         self._pub_image = rospy.Publisher("/stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
         self._pub_stop_line_flag = rospy.Publisher("/stop_line_flag", Bool, queue_size=1, tcp_nodelay=True)
-        self._sub = rospy.Subscriber("/realsense/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
-        # self._sub = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        self._sub_flag = rospy.Subscriber("/detect_line", Bool, self._detect_area_callback, queue_size=1, tcp_nodelay=True)
+        self._sub_img = rospy.Subscriber("/realsense/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+
+        self._detect_flag = False
         self._stop_area = 0
         self._input_image = np.empty(0)
         self._compressed_image = CompressedImage()
         self._compressed_image.format = "jpeg"
+
+    def _detect_area_callback(self, data: Bool):
+        self._detect_flag = data.data
 
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR)
@@ -73,6 +80,8 @@ class StopLineDetector:
 
     def _run(self, _) -> None:
         if self._input_image.shape[0] == 0:
+            return
+        if self._detect_flag == False:
             return
 
         self._stop_line_flag = False
