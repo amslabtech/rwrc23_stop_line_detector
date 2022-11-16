@@ -27,6 +27,7 @@ class StopLineDetector:
     _split_num: int
     _resize_num: int
     _whiteness_th: float
+    _texture_th: float
     _smoothness_th: float
     _pub_image: rospy.Publisher
     _pub_stop_line_flag: rospy.Publisher
@@ -56,6 +57,7 @@ class StopLineDetector:
         self._split_num = rospy.get_param("~split_num", 10)
         self._resize_num = rospy.get_param("~resize_num", 30)
         self._whiteness_th = rospy.get_param("~whiteness_th", 0.5)
+        self._texture_th = rospy.get_param("~texture_th", 10)
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
         self._visualize = rospy.get_param("~visualize", False)
 
@@ -215,7 +217,7 @@ class StopLineDetector:
         for v in range(img.shape[0]-1):
           for u in range(0,img.shape[1]-1,grid):
             end = min(u+grid, img.shape[1]-1)
-            if not (u == end):
+            if (u != end):
               var.append(np.var(mat[v][u:end]))
 
         return var
@@ -225,7 +227,8 @@ class StopLineDetector:
         candidate_imgs = []
         candidate_areas = []
         mean_brightnesses = []
-        textures = []
+        textures_median = []
+        smoothness = []
 
         for i, line_a in enumerate(lines):
             for j, line_b in enumerate(lines):
@@ -248,7 +251,10 @@ class StopLineDetector:
                     candidate_img = self._scale_box(candidate_img, self._resize_num, self._resize_num) #param
                     gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
                     flat_img = gray_img.flatten()
-                    textures.append(np.median(self._calc_luminance_var(gray_img)))
+
+                    textures = self._calc_luminance_var(gray_img)
+                    textures_median.append(np.median(textures))
+                    smoothness.append(sum([n<self._texture_th for n in textures]) / len(textures))
 
                     candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
                     candidate_img = cv2.inRange(candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
@@ -261,18 +267,19 @@ class StopLineDetector:
 
         ##result
         result_img = img.copy()
-        for img, area, br, tex in zip(candidate_imgs, candidate_areas, mean_brightnesses, textures):
+        for img, area, br, tex, smooth in zip(candidate_imgs, candidate_areas, mean_brightnesses, textures_median, smoothness):
             whiteness = br / mean_all_brightness
-            smoothness = 1 / (tex + 1e-6)
-            # print(f"OUT_whiteness: {whiteness}")
-            # print(f"OUT_smoothness: {1/(tex+1e-6)}\n")
-            if self._whiteness_th < whiteness and self._smoothness_th < smoothness:  # param
+            # print(f"whiteness: {whiteness}")
+            # print(f"textures_median; {tex}")
+            # print(f"smoothness: {smooth}\n")
+            if self._whiteness_th < whiteness and self._smoothness_th < smooth:  # param
                 if max(area[2], area[3]) > self._stop_area:
                     self._stop_line_flag = True
 
                 if self._visualize:
                     print(f"whiteness: {whiteness}")
-                    print(f"smoothness: {1/(tex+1e-6)}\n")
+                    print(f"textures_median; {tex}")
+                    print(f"smoothness: {smooth}\n")
                     bgr = (0,255,0)
                     if max(area[2], area[3]) > self._stop_area:
                         bgr = (0,0,255)

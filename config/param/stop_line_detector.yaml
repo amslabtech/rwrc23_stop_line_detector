@@ -1,19 +1,28 @@
 hz: 10 #hz
-trans_upper_left: [202,30] #[271,50] tsukubag
-trans_upper_right: [455,29] #[452,47] tsukubag
-stop_level: 203 #cell(v)
+
+###jikki
+# trans_upper_left: [202,30]
+# trans_upper_right: [455,29]
+###tsukubag
+trans_upper_left: [271,50]
+trans_upper_right: [452,47]
+
 ###(100 cm ~ 30 cm)
 ###(30, 55, 83, 115, 155, 203, 265, 347)
+stop_level: 203 #cell(v)
+
 line_grad_th: 0.666 #y/x
 line_length_th: 10 #cell(u)
 close_line_th: 7 #cell
+
 hsv_lo: [50,0,150]
 hsv_hi: [105,50,255]
 rect_w_lo: 170 #cell(u)
 rect_h_lo: 25 #cell(v)
 rect_h_hi: 40 #cell(v)
 split_num: 10
-resize_num: 30
-whiteness_th: 1.0 #0.8 in ikt
-smoothness_th: 0.2  #20 in ikt
+resize_num: 70
+whiteness_th: 0.8 #0.8 in ikt
+texture_th: 10
+smoothness_th: 0.4
 visualize: True
