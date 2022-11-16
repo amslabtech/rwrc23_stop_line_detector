@@ -1,7 +1,9 @@
 hz: 10 #hz
-eye_level: 40 #cell(v)
-trans_target_level: 188 #cell(v)
-stop_level: 450 #cell(v)
+trans_upper_left: [202,30] #[271,50] tsukubag
+trans_upper_right: [455,29] #[452,47] tsukubag
+stop_level: 203 #cell(v)
+###(100 cm ~ 30 cm)
+###(30, 55, 83, 115, 155, 203, 265, 347)
 line_grad_th: 0.666 #y/x
 line_length_th: 10 #cell(u)
 close_line_th: 7 #cell
@@ -13,6 +15,5 @@ rect_h_hi: 40 #cell(v)
 split_num: 10
 resize_num: 30
 whiteness_th: 1.0 #0.8 in ikt
-smoothness_th: 0.2  #20 in ikti
-tsukubag: False
+smoothness_th: 0.2  #20 in ikt
 visualize: True

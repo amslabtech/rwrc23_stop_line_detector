@@ -10,10 +10,11 @@
     <param name="use_sim_time" value="true"/>
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/2022-11-04-18-53-56.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki_with_realsense_2022-11-06-10-53-25.bag"/> -->
-    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki1_with_realsense_2022-11-06-11-01-34.bag"/>
+    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki1_with_realsense_2022-11-06-11-01-34.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/kaeri_with_realsense_2022-11-06-10-56-36.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stopline_tst.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stop_line_bag_11_11.bag"/> -->
+    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/realsense_calibration.bag"/>
 
  <!-- extract images from a movie -->
     <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
@@ -23,7 +24,7 @@
     <!-- </node> -->
 
 
-    <arg name="start" default="80"/>
+    <arg name="start" default="0"/>
     <arg name="duration" default="200"/>
     <arg name="delay" default="30.0"/>
     <arg name="play_speed_ratio" default="1.0"/>
@@ -37,4 +38,6 @@
         ">
     </node>
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
+    <node name="marker_publisher" pkg="rostopic" type="rostopic"
+        args="pub /detect_line std_msgs/Bool -r 10 true"/>
 </launch>

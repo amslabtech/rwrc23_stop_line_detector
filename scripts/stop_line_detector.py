@@ -13,8 +13,8 @@ from pylsd.lsd import lsd
 
 class StopLineDetector:
     _hz: float
-    _eye_level: int
-    _trans_target_level: int
+    _trans_upper_left: list
+    _trans_upper_right: list
     _stop_level: int
     _line_grad_th: float
     _line_length_th: int
@@ -36,15 +36,14 @@ class StopLineDetector:
     _stop_area: int
     _input_image: np.ndarray
     _compressed_image: CompressedImage
-    _tsukubag: bool
     _visualize: bool
 
     def __init__(self):
         rospy.init_node("stop_line_detector", anonymous=True)
 
         self._hz = rospy.get_param("~hz", 15.0)
-        self._eye_level = rospy.get_param("~eye_level", 45)
-        self._trans_target_level = rospy.get_param("~trans_target_level", 280)
+        self._trans_upper_left = [int(n) for n in rospy.get_param("~trans_upper_left", [0,0])]
+        self._trans_upper_right = [int(n) for n in rospy.get_param("~trans_upper_right", [680,0])]
         self._stop_level = rospy.get_param("~stop_level", 0)
         self._line_grad_th = rospy.get_param("~line_grad_th", 2/3)
         self._line_length_th = rospy.get_param("~line_length_th", 10)
@@ -58,7 +57,6 @@ class StopLineDetector:
         self._resize_num = rospy.get_param("~resize_num", 30)
         self._whiteness_th = rospy.get_param("~whiteness_th", 0.5)
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
-        self._tsukubag = rospy.get_param("~tsukubag", False)
         self._visualize = rospy.get_param("~visualize", False)
 
         self._pub_image = rospy.Publisher("/stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
@@ -99,15 +97,8 @@ class StopLineDetector:
         self._pub_stop_line_flag.publish(self._stop_line_flag)
 
     def _image_trans(self, img):
-        if self._tsukubag:
-            p1 = np.array([271,50])  # tsukuba
-            p2 = np.array([452,47])  # tsukuba
-        else:
-            bottom_to_vp = img.shape[0] - self._eye_level
-            targetlevel_to_vp = self._trans_target_level - self._eye_level
-            target_width = math.floor(img.shape[1] * (targetlevel_to_vp / bottom_to_vp))
-            p1 = np.array([(img.shape[1]-target_width)//2, self._trans_target_level])  # param
-            p2 = np.array([(img.shape[1]+target_width)//2, self._trans_target_level])  # param
+        p1 = np.array(self._trans_upper_left)  # param
+        p2 = np.array(self._trans_upper_right)  # param
         p3 = np.array([0, img.shape[0]-1])
         p4 = np.array([img.shape[1]-1, img.shape[0]-1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
@@ -118,7 +109,9 @@ class StopLineDetector:
         trans_mat = cv2.getPerspectiveTransform(trans_src, trans_dst)
         trans_img = cv2.warpPerspective(img, trans_mat, (dst_width, dst_height))
 
-        self._stop_area = math.floor(dst_height * (self._stop_level - self._trans_target_level) / ((img.shape[0]-1) - self._trans_target_level))
+        trans_target_level = (p1[1] + p2[1]) / 2.0
+        self._stop_area = math.floor(dst_height * (self._stop_level - trans_target_level) / ((img.shape[0]-1) - trans_target_level))
+
         return trans_img
 
     def _get_line_coordinate(self, line):
