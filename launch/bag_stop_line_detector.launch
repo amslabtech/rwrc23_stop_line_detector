@@ -8,25 +8,11 @@
 
     <!-- play rosbag -->
     <param name="use_sim_time" value="true"/>
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/2022-11-04-18-53-56.bag"/> -->
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki_with_realsense_2022-11-06-10-53-25.bag"/> -->
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki1_with_realsense_2022-11-06-11-01-34.bag"/> -->
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/kaeri_with_realsense_2022-11-06-10-56-36.bag"/> -->
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stopline_tst.bag"/> -->
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/dkan_stop_line_bag_11_11.bag"/> -->
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/realsense_calibration.bag"/> -->
-    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/tsukuba_whiteline.bag"/> -->
-    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/tsukuba_whiteline_kaeri.bag"/>
+    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/tsukuba_whiteline_kaeri.bag"/> -->
+        <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki1_with_realsense_2022-11-06-11-01-34.bag"/> -->
+    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2023/stopline/stopline_test_2023-06-19-23-32-11.bag"/>
 
- <!-- extract images from a movie -->
-    <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
-    <!--     args="compressed in:=/stop_line_image raw out:=/stop_line_image" /> -->
-    <!-- <node name="extract" pkg="image_view" type="extract_images" respawn="false" output="screen" cwd="ROS_HOME"> -->
-    <!--     <remap from="image" to="/stop_line_image"/> -->
-    <!-- </node> -->
-
-
-    <arg name="start" default="0"/>
+    <arg name="start" default="10"/>
     <arg name="duration" default="200"/>
     <arg name="delay" default="30.0"/>
     <arg name="play_speed_ratio" default="1.0"/>
@@ -42,4 +28,12 @@
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
     <node name="marker_publisher" pkg="rostopic" type="rostopic"
         args="pub /detect_line std_msgs/Bool -r 10 true"/>
+
+ <!-- extract images from a movie -->
+    <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
+    <!--     args="compressed in:=/stop_line_image raw out:=/stop_line_image" /> -->
+    <!-- <node name="extract" pkg="image_view" type="extract_images" respawn="false" output="screen" cwd="ROS_HOME"> -->
+    <!--     <remap from="image" to="/stop_line_image"/> -->
+    <!-- </node> -->
+
 </launch>

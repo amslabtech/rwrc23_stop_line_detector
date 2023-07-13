@@ -9,6 +9,8 @@ import itertools
 import math
 import numpy as np
 import random
+
+##pip install "ocrd-fork-pylsd == 0.0.3" (python3)
 from pylsd.lsd import lsd
 
 class StopLineDetector:
@@ -90,7 +92,23 @@ class StopLineDetector:
         trans_img = self._image_trans(self._input_image)
         lines = self._detect_lines(trans_img)
         connected_lines = self._connect_close_lines(lines)
+
+        # hsv_img = cv2.cvtColor(trans_img, cv2.COLOR_BGR2HSV)  #HSV
+        # binary_img = cv2.inRange(hsv_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
+        # lines = lsd(binary_img) #Pylsd
+        # lines = lines.tolist() if lines is not None else []
+
+        # for line in connected_lines:
+        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
+        #     color = [random.randint(0, 255) for _ in range(3)]
+        #     detected_img = cv2.line(trans_img, (x1, y1), (x2, y2), color, 2)
+        # if connected_lines:
+        #     result_img = detected_img
+        # else:
+        #     result_img = trans_img
+
         result_img = self._detect_whiteline(trans_img, connected_lines)
+        # result_img = self._detect_whiteline_old(trans_img, connected_lines)
 
         if self._visualize:
             self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
@@ -166,7 +184,7 @@ class StopLineDetector:
             x1, y1, x2, y2 = self._get_line_coordinate(line)
             line_grad = (y2 - y1) / (x2 - x1 + 1e-10)
             line_length = math.hypot(x2 - x1, y2 - y1)
-            if abs(line_grad) < self._line_grad_th and line_length > self._line_length_th:  # param
+            if line_length > self._line_length_th and line_grad < self._line_grad_th:  # param
                 filtered_lines.append((x1, y1, x2, y2))
 
         return filtered_lines
@@ -211,7 +229,7 @@ class StopLineDetector:
     def _calc_luminance_var(self, img):
         mat = np.array(img)
         flat_mat = mat.flatten()
-        grid = math.floor(img.shape[1] / max(self._split_num,1)) #param
+        grid = math.floor(img.shape[1] / min(self._split_num,img.shape[1])) #param
         var = []
 
         for v in range(img.shape[0]-1):
@@ -222,8 +240,129 @@ class StopLineDetector:
 
         return var
 
+    def _crop_rect(self, img, rect):
+        result = img.copy()
+        center, size, angle = rect
+        center = tuple(map(int, center))  # float -> int
+        size = tuple(map(int, size))  # float -> int
+        h, w = img.shape[:2]  # 画像の高さ、幅
+
+        # 画像を回転する。
+        M = cv2.getRotationMatrix2D(center, angle, 1)
+        rotated = cv2.warpAffine(img, M, (w, h))
+
+        # 切り抜く。
+        cropped = cv2.getRectSubPix(rotated, size, center)
+        if cropped is not None:
+            result = cropped
+            if size[1] > size[0]:
+                result = result.transpose(1,0,2)[:,::-1]
+            cv2.imshow('img', result)
+            key = cv2.waitKey(5)
+
+        return result
+
+    def _calc_rectangularity(self, contour, rect_size):
+        contour_area = cv2.contourArea(contour)
+        rect_area = rect_size[0] * rect_size[1] + 1e-10
+
+        return contour_area / rect_area
+
     def _detect_whiteline(self, img, lines):
         ##handpick
+        candidate_imgs = []
+        candidate_areas = []
+        mean_brightnesses = []
+        textures_median = []
+        smoothness = []
+        result_img = img.copy()
+
+        for i, line_a in enumerate(lines):
+            for j, line_b in enumerate(lines):
+                if j <= i:
+                    continue
+
+                contour = np.array(
+                        [
+                            [max(line_a[0], 0), max(line_a[1], 0)],
+                            [min(line_a[2], img.shape[1]-1), min(line_a[3], img.shape[0]-1)],
+                            [min(line_b[2], img.shape[1]-1), min(line_b[3], img.shape[0]-1)],
+                            [max(line_b[0], 0), max(line_b[1], 0)]
+                        ]
+                        )
+                rect = cv2.minAreaRect(contour)
+                center, size, angle = rect
+                rect_points = np.array(cv2.boxPoints(rect), dtype='int64')
+                # print("============visualize rects===========")
+                # print(f"size: {size}")
+                # print(f"angle: {angle}")
+
+                # bgr = [random.randint(0, 255) for _ in range(3)]
+                # # cv2.polylines(result_img, [contour], isClosed=True, color=bgr, thickness=2)
+                # cv2.polylines(result_img, [rect_points], isClosed=True, color=bgr, thickness=2)
+
+                # if self._rect_h_lo <= size[1] <= self._rect_h_hi and self._rect_w_lo <= size[0]: #param
+                # if self._calc_rectangularity(contour, size) > 0.7 and self._rect_h_lo <= min(size[0],size[1]) <= self._rect_h_hi: #param
+                if self._calc_rectangularity(contour, size) > 0.7: #param
+
+                    # bgr = [random.randint(0, 255) for _ in range(3)]
+                    # # cv2.polylines(result_img, [contour], isClosed=True, color=bgr, thickness=2)
+                    # cv2.polylines(result_img, [rect_points], isClosed=True, color=bgr, thickness=2)
+                    candidate_img = self._crop_rect(img.copy(), rect)
+
+
+                    # print("======================================")
+                    # print(f"center: {center}")
+                    # print(f"angle:{angle}")
+                    cv2.imshow('img', self._crop_rect(img.copy(), rect))
+                    key = cv2.waitKey(5)
+
+                    candidate_img = self._scale_box(candidate_img, self._resize_num, self._resize_num) #param
+                    gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
+                    flat_img = gray_img.flatten()
+
+                    textures = self._calc_luminance_var(gray_img)
+                    textures_median.append(np.median(textures))
+                    smoothness.append(sum([n<self._texture_th for n in textures]) / len(textures))
+                    candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
+                    candidate_img = cv2.inRange(candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
+                    # candidate_img = cv2.inRange(candidate_img, tuple(self._rgb_lo), tuple(self._rgb_hi))  # RGB
+                    candidate_imgs.append(candidate_img)
+                    candidate_areas.append(rect_points)
+                    mean_brightness = candidate_img.mean()
+                    mean_brightnesses.append(mean_brightness)
+        if mean_brightnesses:
+            mean_all_brightness = np.array(mean_brightnesses).mean() + 1e-6
+
+        ###result
+        for img, area, br, tex, smooth in zip(candidate_imgs, candidate_areas, mean_brightnesses, textures_median, smoothness):
+            whiteness = br / mean_all_brightness
+            corner_level = max(area[:,1])
+            if self._whiteness_th < whiteness and self._smoothness_th < smooth:  # param
+                if corner_level > self._stop_area:
+                    self._stop_line_flag = True
+
+                if self._visualize:
+                    print("###########################################")
+                    print(f"whiteness: {whiteness}")
+                    print(f"textures_median: {tex}")
+                    print(f"smoothness: {smooth}\n")
+
+                    # cv2.imshow('img', self._crop_rect(img.copy(), rect))
+                    # key = cv2.waitKey(0)
+
+                    bgr = (0,255,0)
+                    if corner_level > self._stop_area:
+                        bgr = (0,0,255)
+                    # # result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), bgr, 2)
+                    # cv2.polylines(result_img, [area], isClosed=True, color=bgr, thickness=2)
+                    cv2.polylines(result_img, [area], isClosed=True, color=bgr, thickness=2)
+
+        return result_img
+
+
+    def _detect_whiteline_old(self, img, lines):
+##handpick
         candidate_imgs = []
         candidate_areas = []
         mean_brightnesses = []
@@ -254,6 +393,7 @@ class StopLineDetector:
 
                     textures = self._calc_luminance_var(gray_img)
                     textures_median.append(np.median(textures))
+
                     smoothness.append(sum([n<self._texture_th for n in textures]) / len(textures))
 
                     candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
@@ -269,17 +409,18 @@ class StopLineDetector:
         result_img = img.copy()
         for img, area, br, tex, smooth in zip(candidate_imgs, candidate_areas, mean_brightnesses, textures_median, smoothness):
             whiteness = br / mean_all_brightness
-            # print(f"whiteness: {whiteness}")
-            # print(f"textures_median; {tex}")
-            # print(f"smoothness: {smooth}\n")
+            print(f"==================================")
+            print(f"whiteness: {whiteness}")
+            print(f"textures_median: {tex}")
+            print(f"smoothness: {smooth}\n")
             if self._whiteness_th < whiteness and self._smoothness_th < smooth:  # param
                 if max(area[2], area[3]) > self._stop_area:
                     self._stop_line_flag = True
 
                 if self._visualize:
-                    print(f"whiteness: {whiteness}")
-                    print(f"textures_median; {tex}")
-                    print(f"smoothness: {smooth}\n")
+                    # print(f"whiteness: {whiteness}")
+                    # print(f"textures_median: {tex}")
+                    # print(f"smoothness: {smooth}\n")
                     bgr = (0,255,0)
                     if max(area[2], area[3]) > self._stop_area:
                         bgr = (0,0,255)
@@ -291,6 +432,7 @@ class StopLineDetector:
         duration = int(1.0 / self._hz * 1e9)
         rospy.Timer(rospy.Duration(nsecs=duration), self._run)
         rospy.spin()
+        cv2.destroyWindow('img')
 
 
 def main():

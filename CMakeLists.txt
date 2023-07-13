@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(stop_line_detector)
+project(rwrc23_stop_line_detector)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O2")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -O0")

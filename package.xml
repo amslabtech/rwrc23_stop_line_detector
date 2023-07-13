@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>stop_line_detector</name>
+  <name>rwrc23_stop_line_detector</name>
   <version>0.0.0</version>
-  <description>The stop_line_detector package</description>
+  <description>The rwrc23_stop_line_detector package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
