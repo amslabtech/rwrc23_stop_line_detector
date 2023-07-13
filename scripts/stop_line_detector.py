@@ -80,7 +80,6 @@ class StopLineDetector:
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR)
         self._compressed_image.header = data.header
-        # self._run()
 
     def _run(self, _) -> None:
         if self._input_image.shape[0] == 0:
@@ -93,22 +92,7 @@ class StopLineDetector:
         lines = self._detect_lines(trans_img)
         connected_lines = self._connect_close_lines(lines)
 
-        # hsv_img = cv2.cvtColor(trans_img, cv2.COLOR_BGR2HSV)  #HSV
-        # binary_img = cv2.inRange(hsv_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
-        # lines = lsd(binary_img) #Pylsd
-        # lines = lines.tolist() if lines is not None else []
-
-        # for line in connected_lines:
-        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
-        #     color = [random.randint(0, 255) for _ in range(3)]
-        #     detected_img = cv2.line(trans_img, (x1, y1), (x2, y2), color, 2)
-        # if connected_lines:
-        #     result_img = detected_img
-        # else:
-        #     result_img = trans_img
-
         result_img = self._detect_whiteline(trans_img, connected_lines)
-        # result_img = self._detect_whiteline_old(trans_img, connected_lines)
 
         if self._visualize:
             self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
@@ -135,7 +119,6 @@ class StopLineDetector:
         return trans_img
 
     def _get_line_coordinate(self, line):
-        # return int(line[0][0]), int(line[0][1]), int(line[0][2]), int(line[0][3])
         return int(line[0]), int(line[1]), int(line[2]), int(line[3]) #Pylsd
 
     def _calc_endpoints_distance(self, src, dst):
@@ -257,8 +240,6 @@ class StopLineDetector:
             result = cropped
             if size[1] > size[0]:
                 result = result.transpose(1,0,2)[:,::-1]
-            cv2.imshow('img', result)
-            key = cv2.waitKey(5)
 
         return result
 
@@ -293,30 +274,13 @@ class StopLineDetector:
                 rect = cv2.minAreaRect(contour)
                 center, size, angle = rect
                 rect_points = np.array(cv2.boxPoints(rect), dtype='int64')
-                # print("============visualize rects===========")
-                # print(f"size: {size}")
-                # print(f"angle: {angle}")
 
-                # bgr = [random.randint(0, 255) for _ in range(3)]
-                # # cv2.polylines(result_img, [contour], isClosed=True, color=bgr, thickness=2)
-                # cv2.polylines(result_img, [rect_points], isClosed=True, color=bgr, thickness=2)
-
-                # if self._rect_h_lo <= size[1] <= self._rect_h_hi and self._rect_w_lo <= size[0]: #param
-                # if self._calc_rectangularity(contour, size) > 0.7 and self._rect_h_lo <= min(size[0],size[1]) <= self._rect_h_hi: #param
                 if self._calc_rectangularity(contour, size) > 0.7: #param
+                    ###debug
+                    # cv2.imshow('img', self._crop_rect(img.copy(), rect))
+                    # key = cv2.waitKey(5)
 
-                    # bgr = [random.randint(0, 255) for _ in range(3)]
-                    # # cv2.polylines(result_img, [contour], isClosed=True, color=bgr, thickness=2)
-                    # cv2.polylines(result_img, [rect_points], isClosed=True, color=bgr, thickness=2)
                     candidate_img = self._crop_rect(img.copy(), rect)
-
-
-                    # print("======================================")
-                    # print(f"center: {center}")
-                    # print(f"angle:{angle}")
-                    cv2.imshow('img', self._crop_rect(img.copy(), rect))
-                    key = cv2.waitKey(5)
-
                     candidate_img = self._scale_box(candidate_img, self._resize_num, self._resize_num) #param
                     gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
                     flat_img = gray_img.flatten()
@@ -326,7 +290,6 @@ class StopLineDetector:
                     smoothness.append(sum([n<self._texture_th for n in textures]) / len(textures))
                     candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
                     candidate_img = cv2.inRange(candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
-                    # candidate_img = cv2.inRange(candidate_img, tuple(self._rgb_lo), tuple(self._rgb_hi))  # RGB
                     candidate_imgs.append(candidate_img)
                     candidate_areas.append(rect_points)
                     mean_brightness = candidate_img.mean()
@@ -348,83 +311,10 @@ class StopLineDetector:
                     print(f"textures_median: {tex}")
                     print(f"smoothness: {smooth}\n")
 
-                    # cv2.imshow('img', self._crop_rect(img.copy(), rect))
-                    # key = cv2.waitKey(0)
-
                     bgr = (0,255,0)
                     if corner_level > self._stop_area:
                         bgr = (0,0,255)
-                    # # result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), bgr, 2)
-                    # cv2.polylines(result_img, [area], isClosed=True, color=bgr, thickness=2)
                     cv2.polylines(result_img, [area], isClosed=True, color=bgr, thickness=2)
-
-        return result_img
-
-
-    def _detect_whiteline_old(self, img, lines):
-##handpick
-        candidate_imgs = []
-        candidate_areas = []
-        mean_brightnesses = []
-        textures_median = []
-        smoothness = []
-
-        for i, line_a in enumerate(lines):
-            for j, line_b in enumerate(lines):
-                if j <= i:
-                    continue
-
-
-                candidate_area = (
-                    max(min(line_a[0], line_a[2], line_b[0], line_b[2]), 0),
-                    min(max(line_a[0], line_a[2], line_b[0], line_b[2]), img.shape[1]-1),
-                    max(min(line_a[1], line_a[3], line_b[1], line_b[3]), 0),
-                    min(max(line_a[1], line_a[3], line_b[1], line_b[3]), img.shape[0]-1)
-                    )
-                candidate_h = abs(candidate_area[2] - candidate_area[3])
-                candidate_w = abs(candidate_area[0] - candidate_area[1])
-
-                if self._rect_h_lo <= candidate_h <= self._rect_h_hi and self._rect_w_lo <= candidate_w: #param
-                    candidate_img = img.copy()[candidate_area[2]:candidate_area[3], candidate_area[0]:candidate_area[1]]
-
-                    candidate_img = self._scale_box(candidate_img, self._resize_num, self._resize_num) #param
-                    gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
-                    flat_img = gray_img.flatten()
-
-                    textures = self._calc_luminance_var(gray_img)
-                    textures_median.append(np.median(textures))
-
-                    smoothness.append(sum([n<self._texture_th for n in textures]) / len(textures))
-
-                    candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
-                    candidate_img = cv2.inRange(candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
-                    # candidate_img = cv2.inRange(candidate_img, tuple(self._rgb_lo), tuple(self._rgb_hi))  # RGB
-                    candidate_imgs.append(candidate_img)
-                    candidate_areas.append(candidate_area)
-                    mean_brightness = candidate_img.mean()
-                    mean_brightnesses.append(mean_brightness)
-        mean_all_brightness = np.array(mean_brightnesses).mean() + 1e-6
-
-        ##result
-        result_img = img.copy()
-        for img, area, br, tex, smooth in zip(candidate_imgs, candidate_areas, mean_brightnesses, textures_median, smoothness):
-            whiteness = br / mean_all_brightness
-            print(f"==================================")
-            print(f"whiteness: {whiteness}")
-            print(f"textures_median: {tex}")
-            print(f"smoothness: {smooth}\n")
-            if self._whiteness_th < whiteness and self._smoothness_th < smooth:  # param
-                if max(area[2], area[3]) > self._stop_area:
-                    self._stop_line_flag = True
-
-                if self._visualize:
-                    # print(f"whiteness: {whiteness}")
-                    # print(f"textures_median: {tex}")
-                    # print(f"smoothness: {smooth}\n")
-                    bgr = (0,255,0)
-                    if max(area[2], area[3]) > self._stop_area:
-                        bgr = (0,0,255)
-                    result_img = cv2.rectangle(result_img, (area[0], area[2]), (area[1], area[3]), bgr, 2)
 
         return result_img
 
@@ -433,7 +323,6 @@ class StopLineDetector:
         rospy.Timer(rospy.Duration(nsecs=duration), self._run)
         rospy.spin()
         cv2.destroyWindow('img')
-
 
 def main():
     StopLineDetector()()
