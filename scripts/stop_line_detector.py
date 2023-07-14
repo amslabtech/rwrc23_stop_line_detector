@@ -205,6 +205,10 @@ class StopLineDetector:
             nw = width
             nh = round(nw / aspect)
 
+        print("===========================================")
+        print(f"shape: {img.shape}")
+        print(f"aspect: {aspect}")
+        print(f"nh: {nh}     nw: {nw}")
         dst = cv2.resize(img, dsize=(nw, nh))
 
         return dst
@@ -275,7 +279,7 @@ class StopLineDetector:
                 center, size, angle = rect
                 rect_points = np.array(cv2.boxPoints(rect), dtype='int64')
 
-                if self._calc_rectangularity(contour, size) > 0.7: #param
+                if self._calc_rectangularity(contour, size) > 0.7 and min(size[:])>=self._rect_h_lo: #param
                     ###debug
                     # cv2.imshow('img', self._crop_rect(img.copy(), rect))
                     # key = cv2.waitKey(5)
@@ -287,7 +291,7 @@ class StopLineDetector:
 
                     textures = self._calc_luminance_var(gray_img)
                     textures_median.append(np.median(textures))
-                    smoothness.append(sum([n<self._texture_th for n in textures]) / len(textures))
+                    smoothness.append(sum([n<self._texture_th for n in textures]) / (len(textures)+1e-10))
                     candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
                     candidate_img = cv2.inRange(candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
                     candidate_imgs.append(candidate_img)
