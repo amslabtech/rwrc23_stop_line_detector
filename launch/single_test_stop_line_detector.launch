@@ -7,4 +7,6 @@
     </node>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
+    <node name="marker_publisher" pkg="rostopic" type="rostopic"
+        args="pub /detect_line std_msgs/Bool -r 10 true"/>
 </launch>
