@@ -23,11 +23,9 @@ class StopLineDetector:
     _close_line_th: int
     _hsv_lo: list
     _hsv_hi: list
-    _rect_w_lo: int
-    _rect_h_lo: int
-    _rect_h_hi: int
     _split_num: int
     _resize_num: int
+    _aspect_th: float
     _whiteness_th: float
     _texture_th: float
     _smoothness_th: float
@@ -53,11 +51,9 @@ class StopLineDetector:
         self._close_line_th = rospy.get_param("~close_line_th", 7)
         self._hsv_lo = [int(n) for n in rospy.get_param("~hsv_lo", [0,0,0])]
         self._hsv_hi = [int(n) for n in rospy.get_param("~hsv_hi", [180,255,255])]
-        self._rect_w_lo = rospy.get_param("~rect_w_lo", 150)
-        self._rect_h_lo = rospy.get_param("~rect_h_lo", 30)
-        self._rect_h_hi = rospy.get_param("~rect_h_hi", 60)
         self._split_num = rospy.get_param("~split_num", 10)
         self._resize_num = rospy.get_param("~resize_num", 30)
+        self._aspect_th = rospy.get_param("~aspect_th", 1.0)
         self._whiteness_th = rospy.get_param("~whiteness_th", 0.5)
         self._texture_th = rospy.get_param("~texture_th", 10)
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
@@ -195,20 +191,13 @@ class StopLineDetector:
 
         return connected_lines
 
-    def _scale_box(self, img, width, height):
+    def _scale_box(self, img, resize):
         h, w = img.shape[:2]
         aspect = w / h
-        if width / height >= aspect:
-            nh = height
-            nw = round(nh * aspect)
-        else:
-            nw = width
-            nh = round(nw / aspect)
 
-        print("===========================================")
-        print(f"shape: {img.shape}")
-        print(f"aspect: {aspect}")
-        print(f"nh: {nh}     nw: {nw}")
+        nw = resize
+        nh = round(nw / aspect)
+
         dst = cv2.resize(img, dsize=(nw, nh))
 
         return dst
@@ -278,14 +267,15 @@ class StopLineDetector:
                 rect = cv2.minAreaRect(contour)
                 center, size, angle = rect
                 rect_points = np.array(cv2.boxPoints(rect), dtype='int64')
+                aspect = max(size[:]) / min(size[:])
 
-                if self._calc_rectangularity(contour, size) > 0.7 and min(size[:])>=self._rect_h_lo: #param
+                if self._calc_rectangularity(contour, size) > 0.7 and self._aspect_th <= aspect <= 2*self._resize_num: #param
                     ###debug
                     # cv2.imshow('img', self._crop_rect(img.copy(), rect))
                     # key = cv2.waitKey(5)
 
                     candidate_img = self._crop_rect(img.copy(), rect)
-                    candidate_img = self._scale_box(candidate_img, self._resize_num, self._resize_num) #param
+                    candidate_img = self._scale_box(candidate_img, self._resize_num) #param
                     gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
                     flat_img = gray_img.flatten()
 
@@ -311,6 +301,7 @@ class StopLineDetector:
 
                 if self._visualize:
                     print("###########################################")
+                    print(f"shape: {img.shape}")
                     print(f"whiteness: {whiteness}")
                     print(f"textures_median: {tex}")
                     print(f"smoothness: {smooth}\n")

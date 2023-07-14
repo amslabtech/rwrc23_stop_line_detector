@@ -15,28 +15,12 @@ line_grad_th: 1.0 #y/x
 line_length_th: 50 #cell(u)
 close_line_th: 20 #cell
 
-# hsv_lo: [0,0,150]
-# hsv_hi: [180,50,255]
 hsv_lo: [0,0,180]
 hsv_hi: [180,50,255]
 
-#ver.1
-# rect_w_lo: 160 #cell(u)
-# rect_h_lo: 35 #cell(v)
-# rect_h_hi: 50 #cell(v)
-# split_num: 10
-# resize_num: 70
-# whiteness_th: 0.9
-# texture_th: 50
-# smoothness_th: 0.40
-# visualize: True
-
-#ver.2
-rect_w_lo: 160 #cell(u)
-rect_h_lo: 35 #cell(v)
-rect_h_hi: 50 #cell(v)
 split_num: 10
 resize_num: 70
+aspect_th: 6.0 #width/hight
 whiteness_th: 0.9
 texture_th: 50
 smoothness_th: 0.85
