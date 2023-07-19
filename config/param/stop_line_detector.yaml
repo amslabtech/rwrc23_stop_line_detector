@@ -20,8 +20,16 @@ hsv_hi: [180,50,255]
 
 split_num: 10
 resize_num: 70
-aspect_th: 6.0 #width/hight
-whiteness_th: 0.9
-texture_th: 50
-smoothness_th: 0.85
+
+###dkan
+# aspect_th: 6.0 #width/hight
+# whiteness_th: 0.9
+# texture_th: 50
+# smoothness_th: 0.85
+###tsukuba
+aspect_th: 3.0 #width/hight
+whiteness_th: 0.6
+texture_th: 35
+smoothness_th: 0.40
+
 visualize: True

@@ -267,7 +267,7 @@ class StopLineDetector:
                 rect = cv2.minAreaRect(contour)
                 center, size, angle = rect
                 rect_points = np.array(cv2.boxPoints(rect), dtype='int64')
-                aspect = max(size[:]) / min(size[:])
+                aspect = max(size[0],size[1]) / (min(size[0],size[1])+1e-10)
 
                 if self._calc_rectangularity(contour, size) > 0.7 and self._aspect_th <= aspect <= 2*self._resize_num: #param
                     ###debug
