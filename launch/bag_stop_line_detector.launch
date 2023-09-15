@@ -9,9 +9,8 @@
     <!-- play rosbag -->
     <param name="use_sim_time" value="true"/>
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/tsukuba_whiteline_kaeri.bag"/> -->
-        <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki1_with_realsense_2022-11-06-11-01-34.bag"/> -->
-        <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/stopline/stopline_test_2023-06-19-23-32-11.bag"/> -->
-        <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/stopline/stopline_data_2023-07-14-19-10-05.bag"/>
+    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc/2022/iki1_with_realsense_2022-11-06-11-01-34.bag"/> -->
+    <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-48-27.bag"/>
 
     <arg name="start" default="0"/>
     <arg name="duration" default="200"/>

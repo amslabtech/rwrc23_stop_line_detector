@@ -196,7 +196,7 @@ class StopLineDetector:
         aspect = w / h
 
         nw = resize
-        nh = round(nw / aspect)
+        nh = max(round(nw / aspect), 1)
 
         dst = cv2.resize(img, dsize=(nw, nh))
 
@@ -270,6 +270,7 @@ class StopLineDetector:
                 aspect = max(size[0],size[1]) / (min(size[0],size[1])+1e-10)
 
                 if self._calc_rectangularity(contour, size) > 0.7 and self._aspect_th <= aspect <= 2*self._resize_num: #param
+
                     ###debug
                     # cv2.imshow('img', self._crop_rect(img.copy(), rect))
                     # key = cv2.waitKey(5)

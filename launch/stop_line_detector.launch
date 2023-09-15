@@ -1,10 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="stop_line_detector_settings" default="$(find rwrc23_stop_line_detector)/config/param/stop_line_detector.yaml"/>
-    <arg name="rviz_settings" default="$(find rwrc23_stop_line_detector)/config/rviz/stop_line_detector.rviz"/>
+    <arg name="config_file" default="$(find rwrc23_stop_line_detector)/config/param/stop_line_detector.yaml"/>
+
     <node pkg="rwrc23_stop_line_detector" type="stop_line_detector.py" name="stop_line_detector" output="screen">
-        <rosparam command="load" file="$(arg stop_line_detector_settings)"/>
+        <rosparam command="load" file="$(arg config_file)"/>
     </node>
 
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
 </launch>
