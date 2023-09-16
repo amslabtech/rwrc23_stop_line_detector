@@ -18,14 +18,16 @@ class StopLineDetector:
     _trans_upper_left: list
     _trans_upper_right: list
     _stop_level: int
-    _line_grad_th: float
     _line_length_th: int
     _close_line_th: int
     _hsv_lo: list
     _hsv_hi: list
     _split_num: int
     _resize_num: int
-    _aspect_th: float
+    _rectangularity_th: float
+    _rect_angle_th: float
+    _aspect_lo: float
+    _aspect_hi: float
     _whiteness_th: float
     _texture_th: float
     _smoothness_th: float
@@ -46,14 +48,16 @@ class StopLineDetector:
         self._trans_upper_left = [int(n) for n in rospy.get_param("~trans_upper_left", [0,0])]
         self._trans_upper_right = [int(n) for n in rospy.get_param("~trans_upper_right", [680,0])]
         self._stop_level = rospy.get_param("~stop_level", 0)
-        self._line_grad_th = rospy.get_param("~line_grad_th", 2/3)
         self._line_length_th = rospy.get_param("~line_length_th", 10)
         self._close_line_th = rospy.get_param("~close_line_th", 7)
         self._hsv_lo = [int(n) for n in rospy.get_param("~hsv_lo", [0,0,0])]
         self._hsv_hi = [int(n) for n in rospy.get_param("~hsv_hi", [180,255,255])]
         self._split_num = rospy.get_param("~split_num", 10)
         self._resize_num = rospy.get_param("~resize_num", 30)
-        self._aspect_th = rospy.get_param("~aspect_th", 1.0)
+        self._rectangularity_th = rospy.get_param("~rectangularity_th", 0.6)
+        self._rect_angle_th = rospy.get_param("~rect_angle_th", 0.6)
+        self._aspect_lo = rospy.get_param("~aspect_lo", 2.0)
+        self._aspect_hi = rospy.get_param("~aspect_hi", 20.0)
         self._whiteness_th = rospy.get_param("~whiteness_th", 0.5)
         self._texture_th = rospy.get_param("~texture_th", 10)
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
@@ -85,10 +89,8 @@ class StopLineDetector:
 
         self._stop_line_flag = False
         trans_img = self._image_trans(self._input_image)
-        lines = self._detect_lines(trans_img)
-        connected_lines = self._connect_close_lines(lines)
-
-        result_img = self._detect_whiteline(trans_img, connected_lines)
+        detected_lines = self._detect_lines(trans_img)
+        result_img = self._detect_whiteline(trans_img, detected_lines)
 
         if self._visualize:
             self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
@@ -153,18 +155,28 @@ class StopLineDetector:
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4,4))
         cl_img = clahe.apply(gray_img)
-        prep_img = cv2.GaussianBlur(cl_img, (3,3), 0)
+        prep_img = cv2.GaussianBlur(cl_img, (5,5), 0)
 
         lines = lsd(prep_img) #Pylsd
         lines = lines.tolist() if lines is not None else []
+        connected_lines = self._connect_close_lines(lines)
+
         ##filter
         filtered_lines = []
-        for line in lines:
+        for line in connected_lines:
             x1, y1, x2, y2 = self._get_line_coordinate(line)
-            line_grad = (y2 - y1) / (x2 - x1 + 1e-10)
             line_length = math.hypot(x2 - x1, y2 - y1)
-            if line_length > self._line_length_th and line_grad < self._line_grad_th:  # param
+            if line_length > self._line_length_th:  # param
                 filtered_lines.append((x1, y1, x2, y2))
+
+        ############### Debug ###############
+        # detected_img = img.copy()
+        # for line in filtered_lines:
+        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
+        #     color = [255, 0, 0]
+        #     detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 5)
+        # cv2.imshow('lines', detected_img)
+        # key = cv2.waitKey(5)
 
         return filtered_lines
 
@@ -236,6 +248,19 @@ class StopLineDetector:
 
         return result
 
+    def _calc_rect_angle(self, area):
+        vec1 = area[0] - area[1]
+        vec2 = area[1] - area[2]
+
+        if np.linalg.norm(vec1) < np.linalg.norm(vec2):
+            long_side = vec2
+        else:
+            long_side = vec1
+
+        angle = np.rad2deg(-np.arctan(long_side[1] / (long_side[0]+1e-10)))
+
+        return np.abs(angle)
+
     def _calc_rectangularity(self, contour, rect_size):
         contour_area = cv2.contourArea(contour)
         rect_area = rect_size[0] * rect_size[1] + 1e-10
@@ -246,9 +271,9 @@ class StopLineDetector:
         ##handpick
         candidate_imgs = []
         candidate_areas = []
-        mean_brightnesses = []
         textures_median = []
         smoothness = []
+        white_ratio = []
         result_img = img.copy()
 
         for i, line_a in enumerate(lines):
@@ -265,15 +290,18 @@ class StopLineDetector:
                         ]
                         )
                 rect = cv2.minAreaRect(contour)
-                center, size, angle = rect
+                center, size, _ = rect
                 rect_points = np.array(cv2.boxPoints(rect), dtype='int64')
+                angle = self._calc_rect_angle(rect_points)
                 aspect = max(size[0],size[1]) / (min(size[0],size[1])+1e-10)
 
-                if self._calc_rectangularity(contour, size) > 0.7 and self._aspect_th <= aspect <= 2*self._resize_num: #param
+                ########## Debug ###########
+                # rospy.logwarn("----------------------------------------------------")
+                # rospy.logwarn(f"rectangularity: {self._calc_rectangularity(contour, size)}")
+                # rospy.logwarn(f"angle: {angle}")
+                # rospy.logwarn(f"aspect: {aspect}")
 
-                    ###debug
-                    # cv2.imshow('img', self._crop_rect(img.copy(), rect))
-                    # key = cv2.waitKey(5)
+                if  self._rectangularity_th < self._calc_rectangularity(contour, size) and angle <= self._rect_angle_th and self._aspect_lo <= aspect <= self._aspect_hi:
 
                     candidate_img = self._crop_rect(img.copy(), rect)
                     candidate_img = self._scale_box(candidate_img, self._resize_num) #param
@@ -285,27 +313,39 @@ class StopLineDetector:
                     smoothness.append(sum([n<self._texture_th for n in textures]) / (len(textures)+1e-10))
                     candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
                     candidate_img = cv2.inRange(candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
+                    whole_area = candidate_img.size
+                    white_ratio.append(cv2.countNonZero(candidate_img) / (whole_area+1e-10))
+
+                    ############### Debug ###############
+                    # rospy.logwarn("===========================================")
+                    # cv2.imshow('img', candidate_img)
+                    # key = cv2.waitKey(5)
+                    # rospy.logwarn(f"white_ratio: {white_ratio}")
+                    # rospy.logwarn(f"smooth: {smoothness}")
+
                     candidate_imgs.append(candidate_img)
                     candidate_areas.append(rect_points)
-                    mean_brightness = candidate_img.mean()
-                    mean_brightnesses.append(mean_brightness)
-        if mean_brightnesses:
-            mean_all_brightness = np.array(mean_brightnesses).mean() + 1e-6
 
         ###result
-        for img, area, br, tex, smooth in zip(candidate_imgs, candidate_areas, mean_brightnesses, textures_median, smoothness):
-            whiteness = br / mean_all_brightness
+        for img, area, white, tex, smooth in zip(candidate_imgs, candidate_areas, white_ratio, textures_median, smoothness):
             corner_level = max(area[:,1])
-            if self._whiteness_th < whiteness and self._smoothness_th < smooth:  # param
+
+            # print("############### DEBUG ###############")
+            # print(f"shape: {img.shape}")
+            # print(f"whiteness: {white}")
+            # print(f"textures_median: {tex}")
+            # print(f"smoothness: {smooth}\n")
+
+            if self._whiteness_th < white and self._smoothness_th < smooth:  # param
                 if corner_level > self._stop_area:
                     self._stop_line_flag = True
 
                 if self._visualize:
-                    print("###########################################")
-                    print(f"shape: {img.shape}")
-                    print(f"whiteness: {whiteness}")
-                    print(f"textures_median: {tex}")
-                    print(f"smoothness: {smooth}\n")
+                    rospy.loginfo("!!!!!!!!!!!!!!!!!!!! DETECTED !!!!!!!!!!!!!!!!!!!!")
+                    rospy.loginfo(f"shape: {img.shape}")
+                    rospy.loginfo(f"whiteness: {white}")
+                    rospy.loginfo(f"textures_median: {tex}")
+                    rospy.loginfo(f"smoothness: {smooth}\n")
 
                     bgr = (0,255,0)
                     if corner_level > self._stop_area:
