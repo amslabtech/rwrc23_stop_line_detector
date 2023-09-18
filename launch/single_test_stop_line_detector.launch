@@ -1,12 +1,18 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="stop_line_detector_settings" default="$(find rwrc23_stop_line_detector)/config/param/stop_line_detector.yaml"/>
+    <arg name="param" default="$(find rwrc23)/config/param/stop_line_detector/ikuta_outdoor.yaml"/>
     <arg name="rviz_settings" default="$(find rwrc23_stop_line_detector)/config/rviz/stop_line_detector.rviz"/>
-    <node pkg="rwrc23_stop_line_detector" type="stop_line_detector.py" name="stop_line_detector" output="screen">
-        <rosparam command="load" file="$(arg stop_line_detector_settings)"/>
-    </node>
+
+    <include file="$(find rwrc23_stop_line_detector)/launch/stop_line_detector.launch">
+        <arg name="config_file" value="$(arg param)"/>
+        <arg name="image_topic" value="/realsense/color/image_raw/compressed"/>
+        <arg name="boot_flag_topic" value="/boot"/>
+        <arg name="hz" value="10"/>
+        <arg name="num_detection" value="3"/>
+        <arg name="visualize" value="true"/>
+    </include>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
     <node name="marker_publisher" pkg="rostopic" type="rostopic"
-        args="pub /task_manager/request_detect_line std_msgs/Bool -r 10 true"/>
+        args="pub /boot std_msgs/Bool -r 10 true"/>
 </launch>

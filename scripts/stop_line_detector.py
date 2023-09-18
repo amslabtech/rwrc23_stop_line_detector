@@ -33,9 +33,9 @@ class StopLineDetector:
     _smoothness_th: float
     _pub_image: rospy.Publisher
     _pub_stop_flag: rospy.Publisher
-    _sub_flag: rospy.Subscriber
-    _sub_img: rospy.Subscriber
-    _request_flag: bool
+    _sub_boot_flag: rospy.Subscriber
+    _sub_image: rospy.Subscriber
+    _boot_flag: bool
     _stop_flag: bool
     _detect_flag: bool
     _detection_count: int
@@ -70,28 +70,27 @@ class StopLineDetector:
 
         self._pub_image = rospy.Publisher("~stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
         self._pub_stop_flag = rospy.Publisher("~stop_flag", Bool, queue_size=1, tcp_nodelay=True)
-        self._sub_flag = rospy.Subscriber("/task_manager/request_detect_line", Bool, self._request_flag_callback, queue_size=1, tcp_nodelay=True)
-        self._sub_img = rospy.Subscriber("/realsense/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        self._sub_boot_flag = rospy.Subscriber("/boot_flag", Bool, self._boot_flag_callback, queue_size=1, tcp_nodelay=True)
+        self._sub_image = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
 
-
-        self._request_flag = False
+        self._boot_flag = False
         self._detection_count = 0
         self._stop_area = 0
         self._input_image = np.empty(0)
         self._compressed_image = CompressedImage()
         self._compressed_image.format = "jpeg"
 
-    def _request_flag_callback(self, data: Bool):
-        self._request_flag = data.data
+    def _boot_flag_callback(self, data: Bool):
+        self._boot_flag = data.data
 
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR)
         self._compressed_image.header = data.header
 
     def _run(self, _) -> None:
-        if self._input_image.shape[0] == 0:
+        if self._boot_flag == False:
             return
-        if self._request_flag == False:
+        if self._input_image.shape[0] == 0:
             return
 
         self._stop_flag = False
@@ -356,8 +355,7 @@ class StopLineDetector:
             # print(f"smoothness: {smooth}\n")
 
             if self._whiteness_th < white and self._smoothness_th < smooth:  # param
-                if corner_level > self._stop_area:
-                    self._detect_flag = True
+                self._detect_flag = True
 
                 if self._visualize:
                     rospy.loginfo("!!!!!!!!!!!!!!!!!!!! DETECTED !!!!!!!!!!!!!!!!!!!!")
