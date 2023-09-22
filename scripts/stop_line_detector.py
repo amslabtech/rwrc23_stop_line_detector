@@ -175,7 +175,7 @@ class StopLineDetector:
         cl_img = clahe.apply(gray_img)
         prep_img = cv2.GaussianBlur(cl_img, (5,5), 0)
 
-        lines = lsd(prep_img) #Pylsd
+        lines = lsd(prep_img, scale=0.6) #Pylsd
         lines = lines.tolist() if lines is not None else []
         connected_lines = self._connect_close_lines(lines)
 
@@ -188,13 +188,13 @@ class StopLineDetector:
                 filtered_lines.append((x1, y1, x2, y2))
 
         ############### Debug ###############
-        # detected_img = img.copy()
-        # for line in filtered_lines:
-        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
-        #     color = [255, 0, 0]
-        #     detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 5)
-        # cv2.imshow('lines', detected_img)
-        # key = cv2.waitKey(5)
+        detected_img = img.copy()
+        for line in filtered_lines:
+            x1, y1, x2, y2 = self._get_line_coordinate(line)
+            color = [255, 0, 0]
+            detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 5)
+        cv2.imshow('lines', detected_img)
+        key = cv2.waitKey(5)
 
         return filtered_lines
 
@@ -358,11 +358,11 @@ class StopLineDetector:
                 self._detect_flag = True
 
                 if self._visualize:
-                    rospy.loginfo("!!!!!!!!!!!!!!!!!!!! DETECTED !!!!!!!!!!!!!!!!!!!!")
-                    rospy.loginfo(f"shape: {img.shape}")
-                    rospy.loginfo(f"whiteness: {white}")
-                    rospy.loginfo(f"textures_median: {tex}")
-                    rospy.loginfo(f"smoothness: {smooth}\n")
+                    rospy.loginfo_throttle(0.5, "!!!!!!!!!!!!!!!!!!!! DETECTED !!!!!!!!!!!!!!!!!!!!")
+                    rospy.loginfo_throttle(0.5, f"shape: {img.shape}")
+                    rospy.loginfo_throttle(0.5, f"whiteness: {white}")
+                    rospy.loginfo_throttle(0.5, f"textures_median: {tex}")
+                    rospy.loginfo_throttle(0.5, f"smoothness: {smooth}\n")
 
                     if corner_level > self._stop_area:
                         bgr = (0,0,255)
