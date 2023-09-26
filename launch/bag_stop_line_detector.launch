@@ -1,12 +1,18 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="stop_line_detector_settings" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/ikuta_outdoor.yaml"/>
-    <!-- <arg name="stop_line_detector_settings" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_sunny.yaml"/> -->
-    <!-- <arg name="stop_line_detector_settings" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_cloudy.yaml"/> -->
+    <!-- <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/ikuta_outdoor.yaml"/> -->
+    <!-- <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_sunny.yaml"/> -->
+    <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_cloudy.yaml"/>
     <arg name="rviz_settings" default="$(find rwrc23_stop_line_detector)/config/rviz/stop_line_detector.rviz"/>
-    <node pkg="rwrc23_stop_line_detector" type="stop_line_detector.py" name="stop_line_detector" output="screen">
-        <rosparam command="load" file="$(arg stop_line_detector_settings)"/>
-    </node>
+
+    <include file="$(find rwrc23_stop_line_detector)/launch/stop_line_detector.launch">
+        <arg name="config_file" value="$(arg param)"/>
+        <arg name="image_topic" value="/realsense/color/image_raw/compressed"/>
+        <arg name="boot_flag_topic" value="/boot"/>
+        <arg name="hz" value="10"/>
+        <arg name="num_detection" value="3"/>
+        <arg name="visualize" value="true"/>
+    </include>
 
     <!-- play rosbag -->
     <!-- Tsukuba sunny -->
@@ -15,14 +21,14 @@
     <!-- Tsukuba cloudy -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-48-27.bag"/> -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-50-23.bag"/> -->
-    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-56-20.bag"/> -->
+    <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-56-20.bag"/>
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-59-38.bag"/> -->
 
     <!-- Ikuta -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline1_2023-09-16-15-20-23.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline2_2023-09-16-15-20-56.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline3_2023-09-16-15-22-22.bag"/> -->
-    <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline4_2023-09-16-15-23-42.bag"/>
+    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline4_2023-09-16-15-23-42.bag"/> -->
 
     <arg name="start" default="0"/>
     <arg name="duration" default="200"/>
@@ -38,7 +44,7 @@
     </node>
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
     <node name="marker_publisher" pkg="rostopic" type="rostopic"
-        args="pub /detect_line std_msgs/Bool -r 10 true"/>
+        args="pub /boot std_msgs/Bool -r 10 true"/>
 
  <!-- extract images from a movie -->
     <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->

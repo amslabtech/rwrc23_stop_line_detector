@@ -32,10 +32,14 @@ class StopLineDetector:
     _texture_th: float
     _smoothness_th: float
     _pub_image: rospy.Publisher
-    _pub_stop_line_flag: rospy.Publisher
-    _sub_flag: rospy.Subscriber
-    _sub_img: rospy.Subscriber
+    _pub_stop_flag: rospy.Publisher
+    _sub_boot_flag: rospy.Subscriber
+    _sub_image: rospy.Subscriber
+    _boot_flag: bool
+    _stop_flag: bool
     _detect_flag: bool
+    _detection_count: int
+    _detection_count_th: int
     _stop_area: int
     _input_image: np.ndarray
     _compressed_image: CompressedImage
@@ -44,7 +48,7 @@ class StopLineDetector:
     def __init__(self):
         rospy.init_node("stop_line_detector", anonymous=True)
 
-        self._hz = rospy.get_param("~hz", 15.0)
+        self._hz = rospy.get_param("~hz", 10.0)
         self._trans_upper_left = [int(n) for n in rospy.get_param("~trans_upper_left", [0,0])]
         self._trans_upper_right = [int(n) for n in rospy.get_param("~trans_upper_right", [680,0])]
         self._stop_level = rospy.get_param("~stop_level", 0)
@@ -61,42 +65,56 @@ class StopLineDetector:
         self._whiteness_th = rospy.get_param("~whiteness_th", 0.5)
         self._texture_th = rospy.get_param("~texture_th", 10)
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
+        self._detection_count_th = rospy.get_param("~detection_count_th", 5)
         self._visualize = rospy.get_param("~visualize", False)
 
-        self._pub_image = rospy.Publisher("/stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
-        self._pub_stop_line_flag = rospy.Publisher("/stop_line_flag", Bool, queue_size=1, tcp_nodelay=True)
-        self._sub_flag = rospy.Subscriber("/detect_line", Bool, self._detect_area_callback, queue_size=1, tcp_nodelay=True)
-        self._sub_img = rospy.Subscriber("/realsense/color/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        self._pub_image = rospy.Publisher("~stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
+        self._pub_stop_flag = rospy.Publisher("~stop_flag", Bool, queue_size=1, tcp_nodelay=True)
+        self._sub_boot_flag = rospy.Subscriber("/boot_flag", Bool, self._boot_flag_callback, queue_size=1, tcp_nodelay=True)
+        self._sub_image = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
 
-        self._detect_flag = False
+        self._boot_flag = False
+        self._detection_count = 0
         self._stop_area = 0
         self._input_image = np.empty(0)
         self._compressed_image = CompressedImage()
         self._compressed_image.format = "jpeg"
 
-    def _detect_area_callback(self, data: Bool):
-        self._detect_flag = data.data
+    def _boot_flag_callback(self, data: Bool):
+        self._boot_flag = data.data
 
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR)
         self._compressed_image.header = data.header
 
     def _run(self, _) -> None:
+        if self._boot_flag == False:
+            return
         if self._input_image.shape[0] == 0:
             return
-        if self._detect_flag == False:
-            return
 
-        self._stop_line_flag = False
+        self._stop_flag = False
+        self._detect_flag = False
+
         trans_img = self._image_trans(self._input_image)
         detected_lines = self._detect_lines(trans_img)
         result_img = self._detect_whiteline(trans_img, detected_lines)
+
+        if self._detect_flag:
+            self._detection_count += 1
+        else:
+            self._detection_count = 0
 
         if self._visualize:
             self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
             self._pub_image.publish(self._compressed_image)
 
-        self._pub_stop_line_flag.publish(self._stop_line_flag)
+        # rospy.logwarn(self._detection_count)
+
+        if self._detection_count >= self._detection_count_th:
+            self._stop_flag = True
+
+        self._pub_stop_flag.publish(self._stop_flag)
 
     def _image_trans(self, img):
         p1 = np.array(self._trans_upper_left)  # param
@@ -157,7 +175,7 @@ class StopLineDetector:
         cl_img = clahe.apply(gray_img)
         prep_img = cv2.GaussianBlur(cl_img, (5,5), 0)
 
-        lines = lsd(prep_img) #Pylsd
+        lines = lsd(prep_img, scale=0.6) #Pylsd
         lines = lines.tolist() if lines is not None else []
         connected_lines = self._connect_close_lines(lines)
 
@@ -170,13 +188,13 @@ class StopLineDetector:
                 filtered_lines.append((x1, y1, x2, y2))
 
         ############### Debug ###############
-        # detected_img = img.copy()
-        # for line in filtered_lines:
-        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
-        #     color = [255, 0, 0]
-        #     detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 5)
-        # cv2.imshow('lines', detected_img)
-        # key = cv2.waitKey(5)
+        detected_img = img.copy()
+        for line in filtered_lines:
+            x1, y1, x2, y2 = self._get_line_coordinate(line)
+            color = [255, 0, 0]
+            detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 5)
+        cv2.imshow('lines', detected_img)
+        key = cv2.waitKey(5)
 
         return filtered_lines
 
@@ -337,19 +355,20 @@ class StopLineDetector:
             # print(f"smoothness: {smooth}\n")
 
             if self._whiteness_th < white and self._smoothness_th < smooth:  # param
-                if corner_level > self._stop_area:
-                    self._stop_line_flag = True
+                self._detect_flag = True
 
                 if self._visualize:
-                    rospy.loginfo("!!!!!!!!!!!!!!!!!!!! DETECTED !!!!!!!!!!!!!!!!!!!!")
-                    rospy.loginfo(f"shape: {img.shape}")
-                    rospy.loginfo(f"whiteness: {white}")
-                    rospy.loginfo(f"textures_median: {tex}")
-                    rospy.loginfo(f"smoothness: {smooth}\n")
+                    rospy.loginfo_throttle(0.5, "!!!!!!!!!!!!!!!!!!!! DETECTED !!!!!!!!!!!!!!!!!!!!")
+                    rospy.loginfo_throttle(0.5, f"shape: {img.shape}")
+                    rospy.loginfo_throttle(0.5, f"whiteness: {white}")
+                    rospy.loginfo_throttle(0.5, f"textures_median: {tex}")
+                    rospy.loginfo_throttle(0.5, f"smoothness: {smooth}\n")
 
-                    bgr = (0,255,0)
                     if corner_level > self._stop_area:
                         bgr = (0,0,255)
+                    else:
+                        bgr = (0,255,0)
+
                     cv2.polylines(result_img, [area], isClosed=True, color=bgr, thickness=2)
 
         return result_img
