@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <launch>
     <!-- <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/ikuta_outdoor.yaml"/> -->
-    <!-- <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_sunny.yaml"/> -->
-    <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_cloudy.yaml"/>
+    <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_sunny.yaml"/>
+    <!-- <arg name="param" default="/home/amsl/catkin_ws/src/rwrc23/config/param/stop_line_detector/tsukuba_cloudy.yaml"/> -->
     <arg name="rviz_settings" default="$(find rwrc23_stop_line_detector)/config/rviz/stop_line_detector.rviz"/>
 
     <include file="$(find rwrc23_stop_line_detector)/launch/stop_line_detector.launch">
@@ -21,16 +21,19 @@
     <!-- Tsukuba cloudy -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-48-27.bag"/> -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-50-23.bag"/> -->
-    <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-56-20.bag"/>
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-56-20.bag"/> -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-59-38.bag"/> -->
+    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc23/rwrc23_main_2023-10-21-15-35-48.bag"/> -->
+    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc23/rwrc23_main_2023-10-21-12-07-59.bag"/>
 
     <!-- Ikuta -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline1_2023-09-16-15-20-23.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline2_2023-09-16-15-20-56.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline3_2023-09-16-15-22-22.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline4_2023-09-16-15-23-42.bag"/> -->
+    <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline4_2023-09-16-15-23-42.bag"/> -->
 
-    <arg name="start" default="0"/>
+    <arg name="start" default="420"/>
     <arg name="duration" default="200"/>
     <arg name="delay" default="30.0"/>
     <arg name="play_speed_ratio" default="1.0"/>
@@ -40,9 +43,11 @@
         -r $(arg play_speed_ratio)
         -s $(arg start)
         --clock
+        --topics /realsense/color/image_raw/compressed /grasscam/image_raw/compressed
+        /grasscam/image_raw/compressed:=/webcam/image_raw/compressed
         ">
     </node>
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_settings)"/>
+    <node pkg="rviz" type="rviz" name="rviz_stopline" args="-d $(arg rviz_settings)"/>
     <node name="marker_publisher" pkg="rostopic" type="rostopic"
         args="pub /boot std_msgs/Bool -r 10 true"/>
 

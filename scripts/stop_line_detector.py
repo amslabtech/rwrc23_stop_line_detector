@@ -28,6 +28,8 @@ class StopLineDetector:
     _rect_angle_th: float
     _aspect_lo: float
     _aspect_hi: float
+    _hight_lo: float
+    _hight_hi: float
     _whiteness_th: float
     _texture_th: float
     _smoothness_th: float
@@ -38,6 +40,7 @@ class StopLineDetector:
     _boot_flag: bool
     _stop_flag: bool
     _detect_flag: bool
+    _stop_area_flag: bool
     _detection_count: int
     _detection_count_th: int
     _stop_area: int
@@ -62,6 +65,8 @@ class StopLineDetector:
         self._rect_angle_th = rospy.get_param("~rect_angle_th", 0.6)
         self._aspect_lo = rospy.get_param("~aspect_lo", 2.0)
         self._aspect_hi = rospy.get_param("~aspect_hi", 20.0)
+        self._height_lo = rospy.get_param("~height_lo", 5.0)
+        self._height_hi = rospy.get_param("~height_hi", 20.0)
         self._whiteness_th = rospy.get_param("~whiteness_th", 0.5)
         self._texture_th = rospy.get_param("~texture_th", 10)
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
@@ -95,6 +100,7 @@ class StopLineDetector:
 
         self._stop_flag = False
         self._detect_flag = False
+        self._stop_area_flag = False
 
         trans_img = self._image_trans(self._input_image)
         detected_lines = self._detect_lines(trans_img)
@@ -109,9 +115,7 @@ class StopLineDetector:
             self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
             self._pub_image.publish(self._compressed_image)
 
-        # rospy.logwarn(self._detection_count)
-
-        if self._detection_count >= self._detection_count_th:
+        if self._stop_area_flag and self._detection_count >= self._detection_count_th:
             self._stop_flag = True
 
         self._pub_stop_flag.publish(self._stop_flag)
@@ -188,13 +192,13 @@ class StopLineDetector:
                 filtered_lines.append((x1, y1, x2, y2))
 
         ############### Debug ###############
-        detected_img = img.copy()
-        for line in filtered_lines:
-            x1, y1, x2, y2 = self._get_line_coordinate(line)
-            color = [255, 0, 0]
-            detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 5)
-        cv2.imshow('lines', detected_img)
-        key = cv2.waitKey(5)
+        # detected_img = img.copy()
+        # for line in filtered_lines:
+        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
+        #     color = [255, 0, 0]
+        #     detected_img = cv2.line(detected_img, (x1, y1), (x2, y2), color, 5)
+        # cv2.imshow('lines', detected_img)
+        # key = cv2.waitKey(5)
 
         return filtered_lines
 
@@ -319,7 +323,7 @@ class StopLineDetector:
                 # rospy.logwarn(f"angle: {angle}")
                 # rospy.logwarn(f"aspect: {aspect}")
 
-                if  self._rectangularity_th < self._calc_rectangularity(contour, size) and angle <= self._rect_angle_th and self._aspect_lo <= aspect <= self._aspect_hi:
+                if  self._rectangularity_th < self._calc_rectangularity(contour, size) and angle <= self._rect_angle_th and self._aspect_lo <= aspect <= self._aspect_hi and self._height_lo <= min(size[0],size[1]) <= self._height_hi:
 
                     candidate_img = self._crop_rect(img.copy(), rect)
                     candidate_img = self._scale_box(candidate_img, self._resize_num) #param
@@ -348,26 +352,40 @@ class StopLineDetector:
         for img, area, white, tex, smooth in zip(candidate_imgs, candidate_areas, white_ratio, textures_median, smoothness):
             corner_level = max(area[:,1])
 
-            # print("############### DEBUG ###############")
-            # print(f"shape: {img.shape}")
-            # print(f"whiteness: {white}")
-            # print(f"textures_median: {tex}")
-            # print(f"smoothness: {smooth}\n")
+            print("############### DEBUG ###############")
+            print(f"shape: {img.shape}")
+            print(f"whiteness: {white}")
+            print(f"textures_median: {tex}")
+            print(f"smoothness: {smooth}")
+            print(f"hight: {min([cv2.norm(area[0]-area[1]),cv2.norm(area[0]-area[2]),cv2.norm(area[0]-area[3])])}\n")
+            debug_img = result_img.copy()
+            cv2.polylines(debug_img, [area], isClosed=True, color=[255,0,128], thickness=2)
+            cv2.imshow('debug', debug_img)
+            key = cv2.waitKey(5)
 
             if self._whiteness_th < white and self._smoothness_th < smooth:  # param
                 self._detect_flag = True
+                if corner_level > self._stop_area:
+                    self._stop_area_flag = True
 
                 if self._visualize:
-                    rospy.loginfo_throttle(0.5, "!!!!!!!!!!!!!!!!!!!! DETECTED !!!!!!!!!!!!!!!!!!!!")
-                    rospy.loginfo_throttle(0.5, f"shape: {img.shape}")
-                    rospy.loginfo_throttle(0.5, f"whiteness: {white}")
-                    rospy.loginfo_throttle(0.5, f"textures_median: {tex}")
-                    rospy.loginfo_throttle(0.5, f"smoothness: {smooth}\n")
-
                     if corner_level > self._stop_area:
                         bgr = (0,0,255)
+                        rospy.logerr("########## DETECTED IN STOP AREA ##########")
+                        rospy.logerr(f"detection count: {self._detection_count}")
+                        rospy.logerr(f"shape: {img.shape}")
+                        rospy.logerr(f"whiteness: {white}")
+                        rospy.logerr(f"textures_median: {tex}")
+                        rospy.logerr(f"smoothness: {smooth}\n")
                     else:
                         bgr = (0,255,0)
+                        log_rate = 0.1
+                        rospy.logwarn_throttle(log_rate, "##### DETECTED #####")
+                        rospy.logwarn_throttle(log_rate, f"detection count: {self._detection_count}")
+                        rospy.logwarn_throttle(log_rate, f"shape: {img.shape}")
+                        rospy.logwarn_throttle(log_rate, f"whiteness: {white}")
+                        rospy.logwarn_throttle(log_rate, f"textures_median: {tex}")
+                        rospy.logwarn_throttle(log_rate, f"smoothness: {smooth}\n")
 
                     cv2.polylines(result_img, [area], isClosed=True, color=bgr, thickness=2)
 
