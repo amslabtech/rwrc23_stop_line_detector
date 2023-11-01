@@ -24,7 +24,13 @@
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-56-20.bag"/> -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-59-38.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc23/rwrc23_main_2023-10-21-15-35-48.bag"/> -->
-    <arg name="bagfile" default="/home/amsl/bagfiles/rwrc23/rwrc23_main_2023-10-21-12-07-59.bag"/>
+
+
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-21/rwrc23_main_2023-10-21-11-05-05.bag"/> -->
+    <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-21/rwrc23_main_2023-10-21-12-07-59.bag"/>
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-21/rwrc23_main_2023-10-21-14-48-31.bag"/> -->
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-22/rwrc23_main_2023-10-22-11-11-36.bag"/> -->
+
 
     <!-- Ikuta -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline1_2023-09-16-15-20-23.bag"/> -->
