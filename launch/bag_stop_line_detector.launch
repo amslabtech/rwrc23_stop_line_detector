@@ -25,12 +25,20 @@
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-07-15/stopline_data/stopline_data_2023-07-15-14-59-38.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/rwrc23/rwrc23_main_2023-10-21-15-35-48.bag"/> -->
 
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-09-23/rwrc23_main_2023-09-23-15-25-59.bag"/> -->
 
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-21/rwrc23_main_2023-10-21-11-05-05.bag"/> -->
-    <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-21/rwrc23_main_2023-10-21-12-07-59.bag"/>
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-21/rwrc23_main_2023-10-21-12-07-59.bag"/> -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-21/rwrc23_main_2023-10-21-14-48-31.bag"/> -->
     <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-22/rwrc23_main_2023-10-22-11-11-36.bag"/> -->
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-22/rwrc23_main_2023-10-22-14-42-12.bag"/> -->
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-22/rwrc23_main_2023-10-22-15-02-19.bag"/> -->
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-22/rwrc23_main_2023-10-22-11-11-36.bag"/> -->
+    <!-- <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-10-22/rwrc23_main_2023-10-22-11-44-46.bag"/> -->
 
+    <arg name="bagfile" default="/share/share/RWRC/rwrc23/bagfiles/tsukuba_23-11-04/rwrc23_main_2023-11-04-10-34-03.bag"/>
+    <!-- <arg name="start" default="1230"/> -->
+    <arg name="start" default="2190"/>
 
     <!-- Ikuta -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline1_2023-09-16-15-20-23.bag"/> -->
@@ -39,7 +47,6 @@
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline4_2023-09-16-15-23-42.bag"/> -->
     <!-- <arg name="bagfile" default="/home/amsl/bagfiles/bagfiles/rwrc/2023/ikuta_stopline4_2023-09-16-15-23-42.bag"/> -->
 
-    <arg name="start" default="420"/>
     <arg name="duration" default="200"/>
     <arg name="delay" default="30.0"/>
     <arg name="play_speed_ratio" default="1.0"/>
@@ -54,8 +61,8 @@
         ">
     </node>
     <node pkg="rviz" type="rviz" name="rviz_stopline" args="-d $(arg rviz_settings)"/>
-    <node name="marker_publisher" pkg="rostopic" type="rostopic"
-        args="pub /boot std_msgs/Bool -r 10 true"/>
+    <!-- <node name="marker_publisher" pkg="rostopic" type="rostopic" -->
+    <!--     args="pub /boot std_msgs/Bool -r 10 true"/> -->
 
  <!-- extract images from a movie -->
     <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->

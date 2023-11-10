@@ -45,7 +45,7 @@ class StopLineDetector:
     _detection_count_th: int
     _stop_area: int
     _input_image: np.ndarray
-    _compressed_image: CompressedImage
+    _pub_image_msg: CompressedImage
     _visualize: bool
 
     def __init__(self):
@@ -83,20 +83,23 @@ class StopLineDetector:
         self._detection_count = 0
         self._stop_area = 0
         self._input_image = np.empty(0)
-        self._compressed_image = CompressedImage()
-        self._compressed_image.format = "jpeg"
+        self._pub_image_msg = CompressedImage()
+        self._pub_image_msg.format = "jpeg"
 
     def _boot_flag_callback(self, data: Bool):
         self._boot_flag = data.data
 
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR)
-        self._compressed_image.header = data.header
+        self._pub_image_msg.header = data.header
 
     def _run(self, _) -> None:
-        if self._boot_flag == False:
-            return
         if self._input_image.shape[0] == 0:
+            return
+        if self._boot_flag == False:
+            if self._visualize:
+                self._pub_image_msg.data = cv2.imencode(".jpg", self._input_image)[1].squeeze().tolist()
+                self._pub_image.publish(self._pub_image_msg)
             return
 
         self._stop_flag = False
@@ -113,8 +116,8 @@ class StopLineDetector:
             self._detection_count = 0
 
         if self._visualize:
-            self._compressed_image.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
-            self._pub_image.publish(self._compressed_image)
+            self._pub_image_msg.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
+            self._pub_image.publish(self._pub_image_msg)
 
         if self._stop_area_flag and self._detection_count >= self._detection_count_th:
             self._stop_flag = True
@@ -201,22 +204,22 @@ class StopLineDetector:
             if line_length > self._line_length_th:  # param
                 filtered_lines.append((x1, y1, x2, y2))
 
-        ############### Debug ###############
-        # lines_img = img.copy()
-        # for line in lines:
-        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
-        #     color = [random.randint(0, 255) for i in range(3)]
-        #     detected_img = cv2.line(lines_img, (x1, y1), (x2, y2), color, 5)
-        # cv2.imshow('lines', lines_img)
-        # key = cv2.waitKey(5)
-        #
-        # filtered_lines_img = img.copy()
-        # for line in filtered_lines:
-        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
-        #     color = [random.randint(0, 255) for i in range(3)]
-        #     detected_img = cv2.line(filtered_lines_img, (x1, y1), (x2, y2), color, 5)
-        # cv2.imshow('filtered_lines', filtered_lines_img)
-        # key = cv2.waitKey(5)
+        ############### debug ###############
+        lines_img = img.copy()
+        for line in lines:
+            x1, y1, x2, y2 = self._get_line_coordinate(line)
+            color = [random.randint(0, 255) for i in range(3)]
+            detected_img = cv2.line(lines_img, (x1, y1), (x2, y2), color, 5)
+        cv2.imshow('lines', lines_img)
+        key = cv2.waitKey(5)
+
+        filtered_lines_img = img.copy()
+        for line in filtered_lines:
+            x1, y1, x2, y2 = self._get_line_coordinate(line)
+            color = [random.randint(0, 255) for i in range(3)]
+            detected_img = cv2.line(filtered_lines_img, (x1, y1), (x2, y2), color, 5)
+        cv2.imshow('filtered_lines', filtered_lines_img)
+        key = cv2.waitKey(5)
 
         return filtered_lines
 
