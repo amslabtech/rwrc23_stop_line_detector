@@ -9,7 +9,7 @@
         <arg name="config_file" value="$(arg param)"/>
         <arg name="image_topic" value="/realsense/color/image_raw/compressed"/>
         <arg name="boot_flag_topic" value="/boot"/>
-        <arg name="hz" value="10"/>
+        <arg name="hz" value="30"/>
         <arg name="num_detection" value="3"/>
         <arg name="visualize" value="true"/>
     </include>
@@ -61,14 +61,7 @@
         ">
     </node>
     <node pkg="rviz" type="rviz" name="rviz_stopline" args="-d $(arg rviz_settings)"/>
-    <!-- <node name="marker_publisher" pkg="rostopic" type="rostopic" -->
-    <!--     args="pub /boot std_msgs/Bool -r 10 true"/> -->
-
- <!-- extract images from a movie -->
-    <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
-    <!--     args="compressed in:=/stop_line_image raw out:=/stop_line_image" /> -->
-    <!-- <node name="extract" pkg="image_view" type="extract_images" respawn="false" output="screen" cwd="ROS_HOME"> -->
-    <!--     <remap from="image" to="/stop_line_image"/> -->
-    <!-- </node> -->
+    <node name="marker_publisher" pkg="rostopic" type="rostopic"
+        args="pub /boot std_msgs/Bool -r 10 true"/>
 
 </launch>

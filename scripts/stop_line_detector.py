@@ -169,7 +169,6 @@ class StopLineDetector:
             dists = []
             for src in src_lines:
                 dists.append(self._calc_endpoints_distance(src, dst))
-                parallelism.append(self._calc_parallelism(src, dst))
             if min(dists) < self._close_line_th:  # param
                 parallelism = self._calc_parallelism(src, dst)
                 if parallelism > self._parallelism_th:
