@@ -204,21 +204,21 @@ class StopLineDetector:
                 filtered_lines.append((x1, y1, x2, y2))
 
         ############### debug ###############
-        lines_img = img.copy()
-        for line in lines:
-            x1, y1, x2, y2 = self._get_line_coordinate(line)
-            color = [random.randint(0, 255) for i in range(3)]
-            detected_img = cv2.line(lines_img, (x1, y1), (x2, y2), color, 5)
-        cv2.imshow('lines', lines_img)
-        key = cv2.waitKey(5)
+        # lines_img = img.copy()
+        # for line in lines:
+        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
+        #     color = [random.randint(0, 255) for i in range(3)]
+        #     detected_img = cv2.line(lines_img, (x1, y1), (x2, y2), color, 5)
+        # cv2.imshow('lines', lines_img)
+        # key = cv2.waitKey(5)
 
-        filtered_lines_img = img.copy()
-        for line in filtered_lines:
-            x1, y1, x2, y2 = self._get_line_coordinate(line)
-            color = [random.randint(0, 255) for i in range(3)]
-            detected_img = cv2.line(filtered_lines_img, (x1, y1), (x2, y2), color, 5)
-        cv2.imshow('filtered_lines', filtered_lines_img)
-        key = cv2.waitKey(5)
+        # filtered_lines_img = img.copy()
+        # for line in filtered_lines:
+        #     x1, y1, x2, y2 = self._get_line_coordinate(line)
+        #     color = [random.randint(0, 255) for i in range(3)]
+        #     detected_img = cv2.line(filtered_lines_img, (x1, y1), (x2, y2), color, 5)
+        # cv2.imshow('filtered_lines', filtered_lines_img)
+        # key = cv2.waitKey(5)
 
         return filtered_lines
 
@@ -374,10 +374,10 @@ class StopLineDetector:
             # print(f"textures_median: {tex}")
             # print(f"smoothness: {smooth}")
             # print(f"hight: {min([cv2.norm(area[0]-area[1]),cv2.norm(area[0]-area[2]),cv2.norm(area[0]-area[3])])}\n")
-            debug_img = result_img.copy()
-            cv2.polylines(debug_img, [area], isClosed=True, color=[255,0,128], thickness=2)
-            cv2.imshow('debug', debug_img)
-            key = cv2.waitKey(5)
+            # debug_img = result_img.copy()
+            # cv2.polylines(debug_img, [area], isClosed=True, color=[255,0,128], thickness=2)
+            # cv2.imshow('debug', debug_img)
+            # key = cv2.waitKey(5)
 
             if self._whiteness_th < white and self._smoothness_th < smooth:  # param
                 self._detect_flag = True
