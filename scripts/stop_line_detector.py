@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
-import rospy
-from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Bool
-
-import cv2
 import itertools
 import math
-import numpy as np
 import random
+
+import cv2
+import numpy as np
+import rospy
 
 ##pip install "ocrd-fork-pylsd == 0.0.3" (python3)
 from pylsd.lsd import lsd
+from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import Bool
+
 
 class StopLineDetector:
     _hz: float
@@ -52,14 +53,20 @@ class StopLineDetector:
         rospy.init_node("stop_line_detector", anonymous=True)
 
         self._hz = rospy.get_param("~hz", 10.0)
-        self._trans_upper_left = [int(n) for n in rospy.get_param("~trans_upper_left", [0,0])]
-        self._trans_upper_right = [int(n) for n in rospy.get_param("~trans_upper_right", [680,0])]
+        self._trans_upper_left = [
+            int(n) for n in rospy.get_param("~trans_upper_left", [0, 0])
+        ]
+        self._trans_upper_right = [
+            int(n) for n in rospy.get_param("~trans_upper_right", [680, 0])
+        ]
         self._stop_level = rospy.get_param("~stop_level", 0)
         self._line_length_th = rospy.get_param("~line_length_th", 10)
         self._close_line_th = rospy.get_param("~close_line_th", 7)
         self._parallelism_th = rospy.get_param("~parallelism_th", 0.80)
-        self._hsv_lo = [int(n) for n in rospy.get_param("~hsv_lo", [0,0,0])]
-        self._hsv_hi = [int(n) for n in rospy.get_param("~hsv_hi", [180,255,255])]
+        self._hsv_lo = [int(n) for n in rospy.get_param("~hsv_lo", [0, 0, 0])]
+        self._hsv_hi = [
+            int(n) for n in rospy.get_param("~hsv_hi", [180, 255, 255])
+        ]
         self._split_num = rospy.get_param("~split_num", 10)
         self._resize_num = rospy.get_param("~resize_num", 30)
         self._rectangularity_th = rospy.get_param("~rectangularity_th", 0.6)
@@ -74,10 +81,29 @@ class StopLineDetector:
         self._detection_count_th = rospy.get_param("~detection_count_th", 5)
         self._visualize = rospy.get_param("~visualize", False)
 
-        self._pub_image = rospy.Publisher("~stop_line_image/compressed", CompressedImage, queue_size=1, tcp_nodelay=True)
-        self._pub_stop_flag = rospy.Publisher("~stop_flag", Bool, queue_size=1, tcp_nodelay=True)
-        self._sub_boot_flag = rospy.Subscriber("/boot_flag", Bool, self._boot_flag_callback, queue_size=1, tcp_nodelay=True)
-        self._sub_image = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, self._compressed_image_callback, queue_size=1, tcp_nodelay=True)
+        self._pub_image = rospy.Publisher(
+            "~stop_line_image/compressed",
+            CompressedImage,
+            queue_size=1,
+            tcp_nodelay=True,
+        )
+        self._pub_stop_flag = rospy.Publisher(
+            "~stop_flag", Bool, queue_size=1, tcp_nodelay=True
+        )
+        self._sub_boot_flag = rospy.Subscriber(
+            "/boot_flag",
+            Bool,
+            self._boot_flag_callback,
+            queue_size=1,
+            tcp_nodelay=True,
+        )
+        self._sub_image = rospy.Subscriber(
+            "/camera/image_raw/compressed",
+            CompressedImage,
+            self._compressed_image_callback,
+            queue_size=1,
+            tcp_nodelay=True,
+        )
 
         self._boot_flag = False
         self._detection_count = 0
@@ -90,7 +116,9 @@ class StopLineDetector:
         self._boot_flag = data.data
 
     def _compressed_image_callback(self, data: CompressedImage):
-        self._input_image = cv2.imdecode(np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR)
+        self._input_image = cv2.imdecode(
+            np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR
+        )
         self._pub_image_msg.header = data.header
 
     def _run(self, _) -> None:
@@ -98,7 +126,11 @@ class StopLineDetector:
             return
         if self._boot_flag == False:
             if self._visualize:
-                self._pub_image_msg.data = cv2.imencode(".jpg", self._input_image)[1].squeeze().tolist()
+                self._pub_image_msg.data = (
+                    cv2.imencode(".jpg", self._input_image)[1]
+                    .squeeze()
+                    .tolist()
+                )
                 self._pub_image.publish(self._pub_image_msg)
             return
 
@@ -116,10 +148,15 @@ class StopLineDetector:
             self._detection_count = 0
 
         if self._visualize:
-            self._pub_image_msg.data = cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
+            self._pub_image_msg.data = (
+                cv2.imencode(".jpg", result_img)[1].squeeze().tolist()
+            )
             self._pub_image.publish(self._pub_image_msg)
 
-        if self._stop_area_flag and self._detection_count >= self._detection_count_th:
+        if (
+            self._stop_area_flag
+            and self._detection_count >= self._detection_count_th
+        ):
             self._stop_flag = True
 
         self._pub_stop_flag.publish(self._stop_flag)
@@ -127,39 +164,48 @@ class StopLineDetector:
     def _image_trans(self, img):
         p1 = np.array(self._trans_upper_left)  # param
         p2 = np.array(self._trans_upper_right)  # param
-        p3 = np.array([0, img.shape[0]-1])
-        p4 = np.array([img.shape[1]-1, img.shape[0]-1])
+        p3 = np.array([0, img.shape[0] - 1])
+        p4 = np.array([img.shape[1] - 1, img.shape[0] - 1])
         dst_width = math.floor(np.linalg.norm(p2 - p1) * 1.0)
         dst_height = math.floor(np.linalg.norm(p3 - p1))
         trans_src = np.float32([p1, p2, p3, p4])
-        trans_dst = np.float32([[0, 0],[dst_width, 0],[0, dst_height],[dst_width, dst_height]])
+        trans_dst = np.float32(
+            [[0, 0], [dst_width, 0], [0, dst_height], [dst_width, dst_height]]
+        )
 
         trans_mat = cv2.getPerspectiveTransform(trans_src, trans_dst)
-        trans_img = cv2.warpPerspective(img, trans_mat, (dst_width, dst_height))
+        trans_img = cv2.warpPerspective(
+            img, trans_mat, (dst_width, dst_height)
+        )
 
         trans_target_level = (p1[1] + p2[1]) / 2.0
-        self._stop_area = math.floor(dst_height * (self._stop_level - trans_target_level) / ((img.shape[0]-1) - trans_target_level))
+        self._stop_area = math.floor(
+            dst_height
+            * (self._stop_level - trans_target_level)
+            / ((img.shape[0] - 1) - trans_target_level)
+        )
 
         return trans_img
 
     def _get_line_coordinate(self, line):
-        return int(line[0]), int(line[1]), int(line[2]), int(line[3]) #Pylsd
+        return int(line[0]), int(line[1]), int(line[2]), int(line[3])  # Pylsd
 
     def _calc_endpoints_distance(self, src, dst):
         dists = (
             math.hypot(src[0] - dst[0], src[1] - dst[1]),
             math.hypot(src[0] - dst[2], src[1] - dst[3]),
             math.hypot(src[2] - dst[0], src[3] - dst[1]),
-            math.hypot(src[2] - dst[2], src[3] - dst[3]),)
+            math.hypot(src[2] - dst[2], src[3] - dst[3]),
+        )
 
         return min(dists)
 
     def _calc_parallelism(self, src, dst):
-        vec1 = [src[2]-src[0], src[3]-src[1]]
-        vec2 = [dst[2]-dst[0], dst[3]-dst[1]]
+        vec1 = [src[2] - src[0], src[3] - src[1]]
+        vec2 = [dst[2] - dst[0], dst[3] - dst[1]]
         norm1 = np.linalg.norm(vec1)
         norm2 = np.linalg.norm(vec2)
-        return abs(np.dot(vec1,vec2)/(norm1*norm2))
+        return abs(np.dot(vec1, vec2) / (norm1 * norm2))
 
     def _search_close_lines(self, src_lines, dst_lines):
         close_lines = []
@@ -187,11 +233,11 @@ class StopLineDetector:
     def _detect_lines(self, img):
         ##preprpceeding
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4,4))
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
         cl_img = clahe.apply(gray_img)
-        prep_img = cv2.GaussianBlur(cl_img, (5,5), 0)
+        prep_img = cv2.GaussianBlur(cl_img, (5, 5), 0)
 
-        lines = lsd(prep_img, scale=0.6) #Pylsd
+        lines = lsd(prep_img, scale=0.6)  # Pylsd
         lines = lines.tolist() if lines is not None else []
         connected_lines = self._connect_close_lines(lines)
 
@@ -259,14 +305,16 @@ class StopLineDetector:
     def _calc_luminance_var(self, img):
         mat = np.array(img)
         flat_mat = mat.flatten()
-        grid = math.floor(img.shape[1] / min(self._split_num,img.shape[1])) #param
+        grid = math.floor(
+            img.shape[1] / min(self._split_num, img.shape[1])
+        )  # param
         var = []
 
-        for v in range(img.shape[0]-1):
-          for u in range(0,img.shape[1]-1,grid):
-            end = min(u+grid, img.shape[1]-1)
-            if (u != end):
-              var.append(np.var(mat[v][u:end]))
+        for v in range(img.shape[0] - 1):
+            for u in range(0, img.shape[1] - 1, grid):
+                end = min(u + grid, img.shape[1] - 1)
+                if u != end:
+                    var.append(np.var(mat[v][u:end]))
 
         return var
 
@@ -284,7 +332,7 @@ class StopLineDetector:
         if cropped is not None:
             result = cropped
             if size[1] > size[0]:
-                result = result.transpose(1,0,2)[:,::-1]
+                result = result.transpose(1, 0, 2)[:, ::-1]
 
         return result
 
@@ -297,7 +345,7 @@ class StopLineDetector:
         else:
             long_side = vec1
 
-        angle = np.rad2deg(-np.arctan(long_side[1] / (long_side[0]+1e-10)))
+        angle = np.rad2deg(-np.arctan(long_side[1] / (long_side[0] + 1e-10)))
 
         return np.abs(angle)
 
@@ -322,18 +370,26 @@ class StopLineDetector:
                     continue
 
                 contour = np.array(
+                    [
+                        [max(line_a[0], 0), max(line_a[1], 0)],
                         [
-                            [max(line_a[0], 0), max(line_a[1], 0)],
-                            [min(line_a[2], img.shape[1]-1), min(line_a[3], img.shape[0]-1)],
-                            [min(line_b[2], img.shape[1]-1), min(line_b[3], img.shape[0]-1)],
-                            [max(line_b[0], 0), max(line_b[1], 0)]
-                        ]
-                        )
+                            min(line_a[2], img.shape[1] - 1),
+                            min(line_a[3], img.shape[0] - 1),
+                        ],
+                        [
+                            min(line_b[2], img.shape[1] - 1),
+                            min(line_b[3], img.shape[0] - 1),
+                        ],
+                        [max(line_b[0], 0), max(line_b[1], 0)],
+                    ]
+                )
                 rect = cv2.minAreaRect(contour)
                 center, size, _ = rect
-                rect_points = np.array(cv2.boxPoints(rect), dtype='int64')
+                rect_points = np.array(cv2.boxPoints(rect), dtype="int64")
                 angle = self._calc_rect_angle(rect_points)
-                aspect = max(size[0],size[1]) / (min(size[0],size[1])+1e-10)
+                aspect = max(size[0], size[1]) / (
+                    min(size[0], size[1]) + 1e-10
+                )
 
                 ########## Debug ###########
                 # rospy.logwarn("----------------------------------------------------")
@@ -341,20 +397,39 @@ class StopLineDetector:
                 # rospy.logwarn(f"angle: {angle}")
                 # rospy.logwarn(f"aspect: {aspect}")
 
-                if  self._rectangularity_th < self._calc_rectangularity(contour, size) and angle <= self._rect_angle_th and self._aspect_lo <= aspect <= self._aspect_hi and self._height_lo <= min(size[0],size[1]) <= self._height_hi:
+                if (
+                    self._rectangularity_th
+                    < self._calc_rectangularity(contour, size)
+                    and angle <= self._rect_angle_th
+                    and self._aspect_lo <= aspect <= self._aspect_hi
+                    and self._height_lo
+                    <= min(size[0], size[1])
+                    <= self._height_hi
+                ):
 
                     candidate_img = self._crop_rect(img.copy(), rect)
-                    candidate_img = self._scale_box(candidate_img, self._resize_num) #param
+                    candidate_img = self._scale_box(
+                        candidate_img, self._resize_num
+                    )  # param
                     gray_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2GRAY)
                     flat_img = gray_img.flatten()
 
                     textures = self._calc_luminance_var(gray_img)
                     textures_median.append(np.median(textures))
-                    smoothness.append(sum([tex<self._texture_th for tex in textures]) / (len(textures)+1e-10))
-                    candidate_img = cv2.cvtColor(candidate_img, cv2.COLOR_BGR2HSV)  #HSV
-                    candidate_img = cv2.inRange(candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi))# param
+                    smoothness.append(
+                        sum([tex < self._texture_th for tex in textures])
+                        / (len(textures) + 1e-10)
+                    )
+                    candidate_img = cv2.cvtColor(
+                        candidate_img, cv2.COLOR_BGR2HSV
+                    )  # HSV
+                    candidate_img = cv2.inRange(
+                        candidate_img, tuple(self._hsv_lo), tuple(self._hsv_hi)
+                    )  # param
                     whole_area = candidate_img.size
-                    white_ratio.append(cv2.countNonZero(candidate_img) / (whole_area+1e-10))
+                    white_ratio.append(
+                        cv2.countNonZero(candidate_img) / (whole_area + 1e-10)
+                    )
 
                     ############### Debug ###############
                     # rospy.logwarn("===========================================")
@@ -365,8 +440,14 @@ class StopLineDetector:
                     candidate_areas.append(rect_points)
 
         ###result
-        for img, area, white, tex, smooth in zip(candidate_imgs, candidate_areas, white_ratio, textures_median, smoothness):
-            corner_level = max(area[:,1])
+        for img, area, white, tex, smooth in zip(
+            candidate_imgs,
+            candidate_areas,
+            white_ratio,
+            textures_median,
+            smoothness,
+        ):
+            corner_level = max(area[:, 1])
 
             # print("############### DEBUG ###############")
             # print(f"shape: {img.shape}")
@@ -379,33 +460,59 @@ class StopLineDetector:
             # cv2.imshow('debug', debug_img)
             # key = cv2.waitKey(5)
 
-            if self._whiteness_th < white and self._smoothness_th < smooth:  # param
+            if (
+                self._whiteness_th < white and self._smoothness_th < smooth
+            ):  # param
                 self._detect_flag = True
                 if corner_level > self._stop_area:
                     self._stop_area_flag = True
 
                 if self._visualize:
                     if corner_level > self._stop_area:
-                        bgr = (0,0,255)
-                        rospy.logerr("########## DETECTED IN STOP AREA ##########")
-                        rospy.logerr(f"detection count: {self._detection_count}")
+                        bgr = (0, 0, 255)
+                        rospy.logerr(
+                            "########## DETECTED IN STOP AREA ##########"
+                        )
+                        rospy.logerr(
+                            f"detection count: {self._detection_count}"
+                        )
                         rospy.logerr(f"shape: {img.shape}")
                         rospy.logerr(f"whiteness: {white}")
                         rospy.logerr(f"textures_median: {tex}")
                         rospy.logerr(f"smoothness: {smooth}\n")
-                        rospy.logerr(f"hight: {min([cv2.norm(area[0]-area[1]),cv2.norm(area[0]-area[2]),cv2.norm(area[0]-area[3])])}\n")
+                        rospy.logerr(
+                            f"hight: {min([cv2.norm(area[0]-area[1]),cv2.norm(area[0]-area[2]),cv2.norm(area[0]-area[3])])}\n"
+                        )
                     else:
-                        bgr = (0,255,0)
+                        bgr = (0, 255, 0)
                         log_rate = 0.5
-                        rospy.logwarn_throttle(log_rate, "##### DETECTED #####")
-                        rospy.logwarn_throttle(log_rate, f"detection count: {self._detection_count}")
+                        rospy.logwarn_throttle(
+                            log_rate, "##### DETECTED #####"
+                        )
+                        rospy.logwarn_throttle(
+                            log_rate,
+                            f"detection count: {self._detection_count}",
+                        )
                         rospy.logwarn_throttle(log_rate, f"shape: {img.shape}")
                         rospy.logwarn_throttle(log_rate, f"whiteness: {white}")
-                        rospy.logwarn_throttle(log_rate, f"textures_median: {tex}")
-                        rospy.logwarn_throttle(log_rate, f"smoothness: {smooth}\n")
-                        rospy.logwarn_throttle(log_rate, f"hight: {min([cv2.norm(area[0]-area[1]),cv2.norm(area[0]-area[2]),cv2.norm(area[0]-area[3])])}\n")
+                        rospy.logwarn_throttle(
+                            log_rate, f"textures_median: {tex}"
+                        )
+                        rospy.logwarn_throttle(
+                            log_rate, f"smoothness: {smooth}\n"
+                        )
+                        rospy.logwarn_throttle(
+                            log_rate,
+                            f"hight: {min([cv2.norm(area[0]-area[1]),cv2.norm(area[0]-area[2]),cv2.norm(area[0]-area[3])])}\n",
+                        )
 
-                    cv2.polylines(result_img, [area], isClosed=True, color=bgr, thickness=2)
+                    cv2.polylines(
+                        result_img,
+                        [area],
+                        isClosed=True,
+                        color=bgr,
+                        thickness=2,
+                    )
 
         return result_img
 
@@ -413,10 +520,12 @@ class StopLineDetector:
         duration = int(1.0 / self._hz * 1e9)
         rospy.Timer(rospy.Duration(nsecs=duration), self._run)
         rospy.spin()
-        cv2.destroyWindow('img')
+        cv2.destroyWindow("img")
+
 
 def main():
     StopLineDetector()()
+
 
 if __name__ == "__main__":
     main()
