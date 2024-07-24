@@ -12,7 +12,7 @@ import rospy
 from pylsd.lsd import lsd
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Bool
-from std_srvs.srv import SetBool, SetBoolResponse, Trigger, TriggerResponse
+from std_srvs.srv import SetBool, SetBoolResponse
 
 
 class StopLineDetector:
@@ -94,7 +94,7 @@ class StopLineDetector:
             tcp_nodelay=True,
         )
         self._request_server = rospy.Service(
-            "~request", Trigger, self._request_callback
+            "~request", SetBool, self._request_callback
         )
         self._task_stop_client = rospy.ServiceProxy("/task/stop", SetBool)
 
@@ -111,11 +111,13 @@ class StopLineDetector:
         )
         self._pub_image_msg.header = data.header
 
-    def _request_callback(self, req: Trigger):
-        self._boot_flag = True
-        res: TriggerResponse = TriggerResponse(
-            success=True, message="Stop line detection started."
-        )
+    def _request_callback(self, req: SetBool):
+        self._boot_flag = req.data
+        res: SetBoolResponse = SetBoolResponse(success=True)
+        if self._boot_flag:
+            res.message = "Stop line detection started."
+        else:
+            res.message = "Stop line detection stopped."
         return res
 
     def _run(self, _) -> None:
