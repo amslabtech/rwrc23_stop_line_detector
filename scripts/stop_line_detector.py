@@ -96,7 +96,7 @@ class StopLineDetector:
         self._request_server = rospy.Service(
             "~request", SetBool, self._request_callback
         )
-        self._task_stop_client = rospy.ServiceProxy("/task/stop", SetBool)
+        self._task_stop_client = rospy.ServiceProxy("~stop", SetBool)
 
         self._boot_flag = False
         self._detection_count = 0
