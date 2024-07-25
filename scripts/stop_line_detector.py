@@ -105,6 +105,9 @@ class StopLineDetector:
         self._pub_image_msg = CompressedImage()
         self._pub_image_msg.format = "jpeg"
 
+        rospy.logwarn("waiting for services")
+        rospy.wait_for_service("~stop")
+
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(
             np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR
@@ -159,9 +162,14 @@ class StopLineDetector:
             self._stop_flag = True
 
         if self._stop_flag:
-            resp: SetBoolResponse = self._task_stop_client(True)
-            rospy.logwarn(resp.message)
-            self._boot_flag = False
+            while not rospy.is_shutdown():
+                try:
+                    resp = self._task_stop_client(True)
+                    rospy.logwarn(resp.message)
+                    self._boot_flag = False
+                    break
+                except rospy.ServiceException as e:
+                    rospy.logwarn(e)
 
     def _image_trans(self, img):
         p1 = np.array(self._trans_upper_left)  # param
