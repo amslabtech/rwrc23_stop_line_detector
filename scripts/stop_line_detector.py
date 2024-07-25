@@ -12,6 +12,7 @@ import rospy
 from pylsd.lsd import lsd
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Bool
+from std_srvs.srv import SetBool, SetBoolResponse
 
 
 class StopLineDetector:
@@ -35,8 +36,6 @@ class StopLineDetector:
     _texture_th: float
     _smoothness_th: float
     _pub_image: rospy.Publisher
-    _pub_stop_flag: rospy.Publisher
-    _sub_boot_flag: rospy.Subscriber
     _sub_image: rospy.Subscriber
     _boot_flag: bool
     _stop_flag: bool
@@ -87,16 +86,6 @@ class StopLineDetector:
             queue_size=1,
             tcp_nodelay=True,
         )
-        self._pub_stop_flag = rospy.Publisher(
-            "~stop_flag", Bool, queue_size=1, tcp_nodelay=True
-        )
-        self._sub_boot_flag = rospy.Subscriber(
-            "/boot_flag",
-            Bool,
-            self._boot_flag_callback,
-            queue_size=1,
-            tcp_nodelay=True,
-        )
         self._sub_image = rospy.Subscriber(
             "/camera/image_raw/compressed",
             CompressedImage,
@@ -104,6 +93,10 @@ class StopLineDetector:
             queue_size=1,
             tcp_nodelay=True,
         )
+        self._request_server = rospy.Service(
+            "~request", SetBool, self._request_callback
+        )
+        self._task_stop_client = rospy.ServiceProxy("~stop", SetBool)
 
         self._boot_flag = False
         self._detection_count = 0
@@ -112,14 +105,23 @@ class StopLineDetector:
         self._pub_image_msg = CompressedImage()
         self._pub_image_msg.format = "jpeg"
 
-    def _boot_flag_callback(self, data: Bool):
-        self._boot_flag = data.data
+        rospy.logwarn("waiting for services")
+        rospy.wait_for_service("~stop")
 
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(
             np.frombuffer(data.data, np.uint8), cv2.IMREAD_COLOR
         )
         self._pub_image_msg.header = data.header
+
+    def _request_callback(self, req: SetBool):
+        self._boot_flag = req.data
+        res: SetBoolResponse = SetBoolResponse(success=True)
+        if self._boot_flag:
+            res.message = "Stop line detection started."
+        else:
+            res.message = "Stop line detection stopped."
+        return res
 
     def _run(self, _) -> None:
         if self._input_image.shape[0] == 0:
@@ -159,7 +161,15 @@ class StopLineDetector:
         ):
             self._stop_flag = True
 
-        self._pub_stop_flag.publish(self._stop_flag)
+        if self._stop_flag:
+            while not rospy.is_shutdown():
+                try:
+                    resp = self._task_stop_client(True)
+                    rospy.logwarn(resp.message)
+                    self._boot_flag = False
+                    break
+                except rospy.ServiceException as e:
+                    rospy.logwarn(e)
 
     def _image_trans(self, img):
         p1 = np.array(self._trans_upper_left)  # param
