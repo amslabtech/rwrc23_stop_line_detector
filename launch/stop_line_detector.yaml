@@ -1,24 +1,11 @@
 visualize: True
-###dkan
-# aspect_th: 6.0 #width/hight
-# whiteness_th: 0.9
-# texture_th: 50
-# smoothness_th: 0.85
-
-###tsukuba
 aspect_th: 3.0 #width/hight
 whiteness_th: 0.90
 texture_th: 5.0
 smoothness_th: 0.75
-
-hz: 10 #hz
-
-###jikki
+hz: 10
 trans_upper_left: [202,30]
 trans_upper_right: [455,29]
-###tsukubag
-# trans_upper_left: [271,50]
-# trans_upper_right: [452,47]
 
 ###(100 cm ~ 30 cm)
 ###(30, 55, 83, 115, 155, 203, 265, 347)
