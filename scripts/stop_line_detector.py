@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 import rospy
 
-##pip install "ocrd-fork-pylsd == 0.0.3" (python3)
 from pylsd.lsd import lsd
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Bool
