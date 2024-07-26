@@ -79,6 +79,7 @@ class StopLineDetector:
         self._smoothness_th = rospy.get_param("~smoothness_th", 0.5)
         self._detection_count_th = rospy.get_param("~detection_count_th", 5)
         self._visualize = rospy.get_param("~visualize", False)
+        self._debug = rospy.get_param("~debug", False)
 
         self._pub_image = rospy.Publisher(
             "~stop_line_image/compressed",
@@ -105,8 +106,11 @@ class StopLineDetector:
         self._pub_image_msg = CompressedImage()
         self._pub_image_msg.format = "jpeg"
 
-        rospy.logwarn("waiting for services")
-        rospy.wait_for_service("~stop")
+        if not self._debug:
+            rospy.logwarn("waiting for services")
+            rospy.wait_for_service("~stop")
+        else:
+            self._boot_flag = True
 
     def _compressed_image_callback(self, data: CompressedImage):
         self._input_image = cv2.imdecode(
@@ -162,6 +166,11 @@ class StopLineDetector:
             self._stop_flag = True
 
         if self._stop_flag:
+            if self._debug:
+                rospy.logwarn("########## STOP ##########")
+                rospy.logwarn(f"detection count: {self._detection_count}")
+                return
+
             while not rospy.is_shutdown():
                 try:
                     resp = self._task_stop_client(True)
