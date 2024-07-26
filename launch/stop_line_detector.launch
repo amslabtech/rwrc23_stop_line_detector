@@ -1,20 +1,18 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="config_file" default="$(find rwrc23_stop_line_detector)/config/param/stop_line_detector.yaml"/>
-    <arg name="image_topic" default=""/>
-    <arg name="boot_flag_topic" default=""/>
+    <arg name="config_file" default="$(find rwrc23_stop_line_detector)/launch/stop_line_detector.yaml"/>
     <arg name="hz" default="10"/>
     <arg name="num_detection" default="3"/>
     <arg name="visualize" default="true"/>
-
+    <arg name="debug" default="false"/>
+    <arg name="image_topic" default="/camera/image_raw/compressed"/>
 
     <node pkg="rwrc23_stop_line_detector" type="stop_line_detector.py" name="stop_line_detector" output="screen">
-        <remap from="/boot_flag" to="$(arg boot_flag_topic)"/>
-        <remap from="/camera/image_raw/compressed" to="$(arg image_topic)"/>
+        <rosparam command="load" file="$(arg config_file)"/>
         <param name="hz" value="$(arg hz)"/>
         <param name="detection_count_th" value="$(arg num_detection)"/>
         <param name="visualize" value="$(arg visualize)"/>
-        <rosparam command="load" file="$(arg config_file)"/>
+        <param name="debug" value="$(arg debug)"/>
+        <remap from="/camera/image_raw/compressed" to="$(arg image_topic)"/>
     </node>
-
 </launch>
